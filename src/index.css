@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import 'react-date-range/dist/styles.css'; 
+@import "react-image-gallery/styles/css/image-gallery.css";
+@import 'react-date-range/dist/theme/default.css';
+
+@import './styles/_constants.scss';
+@import './styles/_utility.scss';
+@import './components/global-navbar/global-navbar.scss';
+@import './components/ux/toast/input/input.scss';
+@import './components/ux/toast/date-range-picker/date-range-picker.scss';
