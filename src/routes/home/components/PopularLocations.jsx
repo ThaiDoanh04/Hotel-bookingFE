@@ -1,5 +1,5 @@
-import ImageCard from './ImageCard';
-import ImageCardSkeleton from './ImageCardSkeleton';
+import ImageCard from '/Users/doandoanhthai/Java/Hotel-bookingFE/Hotel-booking/src/routes/home/components/ImageCard.jsx';
+import ImageCardSkeleton from '/Users/doandoanhthai/Java/Hotel-bookingFE/Hotel-booking/src/routes/home/components/ImageCardSkeleton.jsx';
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 const PopularLocations = (props) => {
   const { popularDestinationsData } = props;
   const navigate = useNavigate();
+
   const onPopularDestincationCardClick = (city) => {
     navigate('/hotels', {
       state: {
@@ -30,20 +31,25 @@ const PopularLocations = (props) => {
         Book Hotels at Popular Destinations
       </h2>
       <div className="flex my-4 gap-x-8 gap-y-4 justify-center flex-wrap">
-        {popularDestinationsData.isLoading
-          ? Array.from({ length: 5 }, (_, index) => (
-              <ImageCardSkeleton key={index} />
-            ))
-          : popularDestinationsData.data.map((city) => (
+        {popularDestinationsData?.isLoading ? (
+          Array.from({ length: 5 }, (_, index) => <ImageCardSkeleton key={index} />)
+        ) : (
+          popularDestinationsData?.data?.length > 0 ? (
+            popularDestinationsData.data.map((city) => (
               <ImageCard
                 key={city.code}
                 name={city.name}
                 imageUrl={city.imageUrl}
                 onPopularDestincationCardClick={onPopularDestincationCardClick}
               />
-            ))}
+            ))
+          ) : (
+            <p className="text-gray-500">No destinations available.</p>
+          )
+        )}
       </div>
     </div>
   );
+  
 };
 export default PopularLocations;

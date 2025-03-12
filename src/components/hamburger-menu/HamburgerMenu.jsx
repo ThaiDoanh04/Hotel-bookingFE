@@ -32,7 +32,7 @@ const HamburgerMenu = (props) => {
           onClick={onHamburgerMenuToggle}
         />
       </div>
-      <ul className="list-none mt-12">
+      <ul className="ne mt-12">
         <NavbarItems
           onHamburgerMenuToggle={onHamburgerMenuToggle}
           isAuthenticated={isAuthenticated}

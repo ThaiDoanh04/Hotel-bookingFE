@@ -23,7 +23,7 @@ const HotelViewCard = (props) => {
     image,
     title,
     subtitle,
-    benefits=[],
+    benefits,
     price,
     ratings,
   } = props;
@@ -43,8 +43,8 @@ const HotelViewCard = (props) => {
           className="block text-slate-700 hover:text-brand transition-colors duration-300"
         >
           <img
-            src={image?.imageUrl || '/assets/hotel.jpg'} 
-            alt={image?.accessibleText || 'Hotel Image'}
+            src={image.imageUrl}
+            alt={image.accessibleText}
             className="md:w-[220px] md:h-[140px]"
           />
         </Link>
@@ -70,15 +70,15 @@ const HotelViewCard = (props) => {
       </div>
       <div className="flex flex-col ml-0 md:ml-auto justify-between border-l-0 md:border-l-2 items-stretch pl-0 md:pl-4">
         <div className="flex justify-between my-3 md:my-0 items-center md:flex-col md:justify-between w-full h-full">
-          <h4 className="font-medium text-sm text-white bg-brand p-2">
+          <h4 className="font-medium text-sm text-white bg-blue-600 p-2">
             {ratings} <FontAwesomeIcon icon={faStar} />
           </h4>
           <p className="text-slate-600 font-bold whitespace-nowrap">
-            ₹ {formatPrice(price)}
+            {formatPrice(price)} VND
           </p>
         </div>
         <button
-          className=" bg-brand-secondary px-4 py-2 text-white whitespace-nowrap"
+          className=" bg-yellow-500 px-4 py-2 text-white whitespace-nowrap"
           onClick={onBookNowClick}
         >
           Book now

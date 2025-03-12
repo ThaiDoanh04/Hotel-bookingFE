@@ -34,17 +34,11 @@ const GlobalFooter = () => {
                 placeholder="Enter email"
                 className="p-2 rounded"
               />
-              <button className="ml-2 p-2 bg-brand text-white rounded">
+              <button className="ml-2 p-2 bg-blue-600 text-white rounded">
                 Subscribe
               </button>
             </form>
           </div>
-        </div>
-        <div className="text-center mt-10">
-          <p>Designed and styled by izoogood</p>
-          <p>
-            &copy; {new Date().getFullYear()} izoogood. All rights reserved.
-          </p>
         </div>
       </div>
     </footer>

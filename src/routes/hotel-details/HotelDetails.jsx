@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import HotelViewCard from '../../components/hotel-view-card/HotelViewCard';
-import HotelViewCardSkeleton from '../../components/hotel-view-card-skeleton/HotelViewCardSkeleton';
+import { networkAdapter } from '../../service/NetworkAdapter';
+import HotelDetailsViewCard from './components/hotel-details-view-card/HotelDetailsViewCard';
+import HotelDetailsViewCardSkeleton from './components/hotel-details-view-card-skeleton/HotelDetailsViewCardSkeleton';
+
 /**
  * Represents the hotel details component.
  * @component
@@ -16,22 +18,11 @@ const HotelDetails = () => {
 
   useEffect(() => {
     const fetchHotelDetails = async () => {
-      // Giả lập dữ liệu API với độ trễ
-      setTimeout(() => {
-        setHotelDetails({
-          isLoading: false,
-          data: {
-            id: hotelId,
-            image:'/assets/hotel.jpg',
-            name: 'Hotel Luxury',
-            location: '123 Beach Street, Miami',
-            rating: 4.5,
-            pricePerNight: '$200',
-            amenities: ['Free Wi-Fi', 'Pool', 'Gym', 'Spa'],
-            description: 'A luxurious hotel with a beautiful ocean view and excellent services.',
-          },
-        });
-      }, 1000); // Giả lập delay 1s
+      const response = await networkAdapter.get(`/api/hotel/${hotelId}`);
+      setHotelDetails({
+        isLoading: false,
+        data: response.data,
+      });
     };
 
     fetchHotelDetails();
@@ -40,9 +31,9 @@ const HotelDetails = () => {
   return (
     <>
       {hotelDetails.isLoading ? (
-        <HotelViewCardSkeleton />
+        <HotelDetailsViewCardSkeleton />
       ) : (
-        <HotelViewCard hotelDetails={hotelDetails.data} />
+        <HotelDetailsViewCard hotelDetails={hotelDetails.data} />
       )}
     </>
   );

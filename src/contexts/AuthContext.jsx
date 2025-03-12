@@ -1,4 +1,5 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
+import { networkAdapter } from '../service/NetworkAdapter';
 
 export const AuthContext = createContext();
 
@@ -10,16 +11,22 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
+  const [authCheckTrigger, setAuthCheckTrigger] = useState(false);
 
-  /**
-   * Simulates authentication state changes.
-   */
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const response = await networkAdapter.get('api/users/auth-user');
+      if (response && response.data) {
+        setIsAuthenticated(response.data.isAuthenticated);
+        setUserDetails(response.data.userDetails);
+      }
+    };
+
+    checkAuthStatus();
+  }, [authCheckTrigger]);
+
   const triggerAuthCheck = () => {
-    setIsAuthenticated((prev) => !prev);
-    setUserDetails((prev) =>
-      prev ? null : { name: 'Guest User', email: 'guest@example.com' }
-    );
-    console.log('Auth state changed (simulated)');
+    setAuthCheckTrigger((prev) => !prev);
   };
 
   return (

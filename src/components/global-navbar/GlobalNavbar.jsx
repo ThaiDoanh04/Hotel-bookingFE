@@ -23,19 +23,19 @@ const GlobalNavbar = ({ isAuthenticated }) => {
       <ul className="list-none hidden md:flex">
         <NavbarItems isAuthenticated={isAuthenticated} />
       </ul>
-      <FontAwesomeIcon
+      {/* <FontAwesomeIcon
         data-testid="menu-toggle__button"
         icon={faBars}
         size="2x"
         color="#fff"
         className="block md:hidden"
         onClick={onHamburgerMenuToggle}
-      />
-      <HamburgerMenu
+      /> */}
+      {/* <HamburgerMenu
         isVisible={isVisible}
         onHamburgerMenuToggle={onHamburgerMenuToggle}
         isAuthenticated={isAuthenticated}
-      />
+      /> */}
     </div>
   );
 };

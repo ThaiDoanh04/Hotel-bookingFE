@@ -97,17 +97,15 @@ const ResultsContainer = (props) => {
             )}
           </div>
           <div className="hotels-results__container mx-2 md:mx-0 flex flex-col gap-y-2 w-full">
-            {hotelsResults.isLoading ? (
-              Array.from({ length: 5 }, (_, index) => (
-                <HotelViewCardSkeleton key={index} />
-              ))
-            ) : hotelsResults.data.length > 0 ? (
+            {hotelsResults?.isLoading ? (
+              Array.from({ length: 5 }, (_, index) => <HotelViewCardSkeleton key={index} />)
+            ) : Array.isArray(hotelsResults?.data) && hotelsResults.data.length > 0 ? (
               hotelsResults.data.map((hotel) => (
                 <HotelViewCard
                   key={hotel.hotelCode}
                   id={hotel.hotelCode}
                   title={hotel.title}
-                  image={hotel.images[0]}
+                  image={hotel?.images?.[0] || ''}
                   subtitle={hotel.subtitle}
                   benefits={hotel.benefits}
                   ratings={hotel.ratings}
@@ -117,7 +115,7 @@ const ResultsContainer = (props) => {
             ) : (
               <EmptyHotelsState />
             )}
-          </div>
+        </div>
         </div>
       </div>
     </div>

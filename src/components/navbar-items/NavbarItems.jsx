@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import DropdownButton from '../ux/toast/DropdownButton';
+import { networkAdapter } from '../../service/NetworkAdapter';
 import { useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 
@@ -13,12 +14,14 @@ import { AuthContext } from '../../contexts/AuthContext';
 const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const context = useContext(AuthContext);
 
   /**
-   * Handles the logout action (temporary logic without API)
+   * Handles the logout action by calling the logout API and updating the authentication state.
    */
   const handleLogout = async () => {
-    console.log('User logged out (simulated)');
+    await networkAdapter.post('api/users/logout');
+    context.triggerAuthCheck();
     navigate('/login');
   };
 
@@ -33,7 +36,9 @@ const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
    * @param {string} path - The path to check.
    * @returns {boolean} - True if the path is active, false otherwise.
    */
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
 
   return (
     <>
@@ -70,7 +75,9 @@ const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
           About us
         </Link>
       </li>
-      <li className={`${!isAuthenticated && 'p-4 hover:bg-blue-900 md:hover:bg-brand'}`}>
+      <li
+        className={`${!isAuthenticated && 'p-4 hover:bg-blue-900 md:hover:bg-brand'}`}
+      >
         {isAuthenticated ? (
           <DropdownButton triggerType="click" options={dropdownOptions} />
         ) : (

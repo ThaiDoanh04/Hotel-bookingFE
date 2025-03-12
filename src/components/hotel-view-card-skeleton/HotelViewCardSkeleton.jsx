@@ -26,7 +26,7 @@ const HotelViewCardSkeleton = () => {
               <div className="h-2 bg-gray-200 rounded-full w-14 mb-2.5"></div>
             </div>
             <div className="h-2 bg-gray-200 rounded-full w-14 mb-2.5"></div>
-            <button className="opacity-0 bg-brand-secondary px-4 py-2 text-white whitespace-nowrap">
+            <button className="opacity-0 bg-yellow-500 px-4 py-2 text-white whitespace-nowrap">
               Book now
             </button>
           </div>
