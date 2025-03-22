@@ -1,4 +1,4 @@
-const API_DOMAIN = "http://localhost:5173/";
+const API_DOMAIN = "http://localhost:2004/";
 
 export const get = async (path) => {
     const response = await fetch(API_DOMAIN + path);
@@ -20,6 +20,7 @@ export const post = async (path, options) => {
     return result;
 }
 
+
 export const del = async (path) => {
     const response = await fetch((API_DOMAIN + path), {
         method: "DELETE"
@@ -31,6 +32,19 @@ export const del = async (path) => {
 export const patch = async (path, options) => {
     const response = await fetch((API_DOMAIN + path), {
         method: "PATCH",
+        headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(options)
+    })
+    const result = await response.json();
+    return result;
+}
+
+export const put = async (path, options) => {
+    const response = await fetch((API_DOMAIN + path), {
+        method: "PUT",
         headers: {
             Accept: "application/json",
             "Content-Type": "application/json"

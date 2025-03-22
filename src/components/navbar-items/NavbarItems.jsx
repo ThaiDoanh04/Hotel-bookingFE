@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import DropdownButton from '../ux/toast/DropdownButton';
-import { networkAdapter } from '../../service/NetworkAdapter';
+import { authService } from '../../service/authService';
 import { useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 
@@ -9,20 +9,26 @@ import { AuthContext } from '../../contexts/AuthContext';
  *
  * @param {Object} props - The component's props.
  * @param {boolean} props.isAuthenticated - A flag indicating whether the user is authenticated.
- * @param {Function} props.onHamburgerMenuToggle
+ * @param {Function} props.onHamburgerMenuToggle - Function to toggle the hamburger menu.
  */
 const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const context = useContext(AuthContext);
+  const { triggerAuthCheck } = useContext(AuthContext);
+
+
 
   /**
    * Handles the logout action by calling the logout API and updating the authentication state.
    */
   const handleLogout = async () => {
-    await networkAdapter.post('api/users/logout');
-    context.triggerAuthCheck();
-    navigate('/login');
+    try {
+      await authService.logout();
+      triggerAuthCheck();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const dropdownOptions = [

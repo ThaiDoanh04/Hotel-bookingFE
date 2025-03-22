@@ -1,9 +1,9 @@
-import HeroCover from '/Users/doandoanhthai/Java/Hotel-bookingFE/Hotel-booking/src/routes/home/components/HeroCover.jsx';
-import PopularLocations from '/Users/doandoanhthai/Java/Hotel-bookingFE/Hotel-booking/src/routes/home/components/PopularLocations.jsx';
-import { networkAdapter } from '../../service/NetworkAdapter';
+import HeroCover from '../../routes/home/components/HeroCover.jsx';
+import PopularLocations from '../../routes/home/components/PopularLocations.jsx';
+import { get } from '../../utils/request.js';
 import { useState, useEffect, useCallback } from 'react';
 import { MAX_GUESTS_INPUT_VALUE } from '../../utils/constants';
-import ResultsContainer from '/Users/doandoanhthai/Java/Hotel-bookingFE/Hotel-booking/src/components/results-container/ResultsContainer.jsx';
+import ResultsContainer from '../../components/results-container/ResultsContainer.jsx';
 import { formatDate } from '../../utils/date-helpers';
 import { useNavigate } from 'react-router-dom';
 import _debounce from 'lodash/debounce';
@@ -108,30 +108,31 @@ const Home = () => {
      * @returns {Promise<void>} A promise that resolves when the data is fetched.
      */
     const getInitialData = async () => {
-      const popularDestinationsResponse = await networkAdapter.get(
-        '/api/popularDestinations'
-      );
+      // const popularDestinationsResponse = await get(
+      //   'api/popularDestinations'
+      // );
       const hotelsResultsResponse =
-        await networkAdapter.get('/api/nearbyHotels');
+        await get('api/hotels');
 
-      const availableCitiesResponse = await networkAdapter.get(
-        '/api/availableCities'
-      );
-      if (availableCitiesResponse) {
-        setAvailableCities(availableCitiesResponse.data.elements);
-      }
+      // const availableCitiesResponse = await get(
+      //   'api/availableCities'
+      // );
+      // if (availableCitiesResponse) {
+      //   setAvailableCities(availableCitiesResponse.data.elements);
+      // }
 
-      if (popularDestinationsResponse) {
-        setPopularDestinationsData({
-          isLoading: false,
-          data: popularDestinationsResponse.data.elements,
-          errors: popularDestinationsResponse.errors,
-        });
-      }
+      // if (popularDestinationsResponse) {
+      //   setPopularDestinationsData({
+      //     isLoading: false,
+      //     data: popularDestinationsResponse.data.elements,
+      //     errors: popularDestinationsResponse.errors,
+      //   });
+      // }
+      console.log(hotelsResultsResponse);
       if (hotelsResultsResponse) {
         setHotelsResults({
           isLoading: false,
-          data: hotelsResultsResponse.data.elements,
+          data: hotelsResultsResponse,
           errors: hotelsResultsResponse.errors,
         });
       }

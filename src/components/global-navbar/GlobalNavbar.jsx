@@ -5,9 +5,11 @@ import HamburgerMenu from '../hamburger-menu/HamburgerMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import NavbarItems from '../navbar-items/NavbarItems';
-
-const GlobalNavbar = ({ isAuthenticated }) => {
+import { useContext } from 'react';
+import { AuthContext } from '../../contexts/AuthContext';
+const GlobalNavbar = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const { isAuthenticated } = useContext(AuthContext);
 
   const onHamburgerMenuToggle = () => {
     setIsVisible(!isVisible);

@@ -7,7 +7,7 @@ import {
   faCreditCard,
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../../contexts/AuthContext';
-import { networkAdapter } from '../../service/NetworkAdapter';
+import { get } from '../../utils/request';
 import { useContext } from 'react';
 import PaymentMethodsPanel from './components/PaymentsMethodsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -57,19 +57,21 @@ const UserProfile = () => {
   };
 
   // effect to set initial state of user details
-  useEffect(() => {
-    if (!userDetails) {
-      navigate('/login');
-    }
-  }, [navigate, userDetails]);
+  // useEffect(() => {
+  //   console.log(userDetails);
+  //   if (!userDetails) {
+  //     console.log('vao');
+  //     navigate('/login');
+  //   }
+  // }, [navigate, userDetails]);
 
   // effect to set initial state of user bookings data
   useEffect(() => {
     const getInitialData = async () => {
-      const userBookingsDataResponse = await networkAdapter.get(
+      const userBookingsDataResponse = await get(
         '/api/users/bookings'
       );
-      const userPaymentMethodsResponse = await networkAdapter.get(
+      const userPaymentMethodsResponse = await get(
         'api/users/payment-methods'
       );
       if (userBookingsDataResponse && userBookingsDataResponse.data) {

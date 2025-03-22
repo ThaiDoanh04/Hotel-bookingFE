@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import GlobalSearchBox from '../../components/global-search-box/GlobalSearchbox';
+import GlobalSearchBox from '../../components/global-search-box/GlobalSearchBox';
 import ResultsContainer from '../../components/results-container/ResultsContainer';
-import { networkAdapter } from '../../service/NetworkAdapter';
+import { get } from '../../utils/request';
 import isEmpty from '../../utils/helpers';
 import { MAX_GUESTS_INPUT_VALUE } from '../../utils/constants';
 import { formatDate } from '../../utils/date-helpers';
@@ -221,7 +221,7 @@ const HotelsSearch = () => {
       data: [],
       errors: [],
     });
-    const hotelsResultsResponse = await networkAdapter.get('/api/hotels', {
+    const hotelsResultsResponse = await get('/api/hotels', {
       filters: JSON.stringify(filters),
       currentPage: currentResultsPage,
       advancedFilters: JSON.stringify([
@@ -242,7 +242,7 @@ const HotelsSearch = () => {
   };
 
   const getVerticalFiltersData = async () => {
-    const filtersDataResponse = await networkAdapter.get(
+    const filtersDataResponse = await get(
       'api/hotels/verticalFilters'
     );
     if (filtersDataResponse) {
@@ -274,7 +274,7 @@ const HotelsSearch = () => {
 
   // Fetches the list of available cities
   const fetchAvailableCities = async () => {
-    const availableCitiesResponse = await networkAdapter.get(
+    const availableCitiesResponse = await get(
       '/api/availableCities'
     );
     if (availableCitiesResponse) {

@@ -1,6 +1,6 @@
 import HotelBookingDetailsCard from '../hotel-booking-details-card/HotelBookingDetailsCard';
 import UserReviews from '../user-reviews/UserReviews';
-import { networkAdapter } from '../../../../service/NetworkAdapter';
+import { get } from '../../../../utils/request';
 import React, { useEffect, useState } from 'react';
 import ReactImageGallery from 'react-image-gallery';
 
@@ -41,11 +41,8 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
       data: [],
     });
     const fetchHotelReviews = async () => {
-      const response = await networkAdapter.get(
-        `/api/hotel/${hotelDetails?.hotelCode}/reviews`,
-        {
-          currentPage: currentReviewsPage,
-        }
+      const response = await get(
+        `/api/hotel/${hotelDetails?.hotelCode}/reviews?currentPage=${currentReviewsPage}`
       );
       if (response && response.data) {
         setReviewData({

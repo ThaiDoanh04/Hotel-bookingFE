@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { networkAdapter } from '../../service/NetworkAdapter';
-import React, { useContext } from 'react';
+import { useState, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '../../service/authService';
 import { AuthContext } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import validations from '../../utils/validations';
 import Toast from '../../components/ux/toast/Toast';
 import { LOGIN_MESSAGES } from '../../utils/constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 /**
  * Login Component
@@ -17,13 +17,13 @@ import { LOGIN_MESSAGES } from '../../utils/constants';
  */
 const Login = () => {
   const navigate = useNavigate();
-  const context = useContext(AuthContext);
+  const { triggerAuthCheck } = useContext(AuthContext);
   const [loginData, setLoginData] = useState({
     email: '',
     password: '',
   });
 
-  const [errorMessage, setErrorMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   /**
    * Handles input changes for the login form fields.
@@ -42,14 +42,14 @@ const Login = () => {
    */
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-
     if (validations.validate('email', loginData.email)) {
-      const response = await networkAdapter.post('api/users/login', loginData);
-      if (response && response.data.token) {
-        context.triggerAuthCheck();
+      const response = await authService.login(loginData);
+      console.log(response.token);
+      if (response && response.token && !response.error) {
+        triggerAuthCheck();
         navigate('/user-profile');
-      } else if (response && response.errors.length > 0) {
-        setErrorMessage(response.errors[0]);
+      } else {
+        setErrorMessage(response.error || LOGIN_MESSAGES.FAILED);
       }
     } else {
       setErrorMessage(LOGIN_MESSAGES.FAILED);

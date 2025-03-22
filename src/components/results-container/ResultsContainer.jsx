@@ -102,8 +102,8 @@ const ResultsContainer = (props) => {
             ) : Array.isArray(hotelsResults?.data) && hotelsResults.data.length > 0 ? (
               hotelsResults.data.map((hotel) => (
                 <HotelViewCard
-                  key={hotel.hotelCode}
-                  id={hotel.hotelCode}
+                  key={hotel.hotelId}
+                  id={hotel.hotelId}
                   title={hotel.title}
                   image={hotel?.images?.[0] || ''}
                   subtitle={hotel.subtitle}

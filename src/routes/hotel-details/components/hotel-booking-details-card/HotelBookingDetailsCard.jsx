@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import { differenceInCalendarDays } from 'date-fns';
 import DateRangePicker from '../../../../components/ux/toast/date-range-picker/DateRangePicker';
-import { networkAdapter } from '../../../../service/NetworkAdapter';
+import { get } from '../../../../utils/request';
 import { DEFAULT_TAX_DETAILS } from '../../../../utils/constants';
 import { useNavigate } from 'react-router-dom';
 import queryString from 'query-string';
@@ -162,7 +162,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   // Effect for fetching booking details
   useEffect(() => {
     const getBookingDetails = async () => {
-      const response = await networkAdapter.get(
+      const response = await get(
         `api/hotel/${hotelCode}/booking/enquiry`
       );
       if (response && response.data) {

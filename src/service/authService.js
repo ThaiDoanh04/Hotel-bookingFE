@@ -1,37 +1,75 @@
-import {get,post} from "../utils/request" // Import các phương thức từ api.js
+// Import methods from request.js
+import { post, get } from '../utils/request.js';
 
-export const login = async (loginData) => {
-  try {
-    const result = await post("auth/login", loginData); // Gọi API login
-    return result;
-  } catch (error) {
-    throw new Error(error.message || "Đăng nhập thất bại!");
-  }
-};
+// Authentication service for login and registration
+class AuthService {
+  // Login method
+  async login(credentials) {
+    try {
+      const response = await post('auth/login', credentials);
+      // Store user data or token if needed
+      if (response && !response.error) {
+        // You might want to store user data in localStorage or sessionStorage 
+        localStorage.setItem('authToken',response.token);
+        const user = await post('auth/me',{token:response.token});
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+      return response;
 
-export const register = async (registerData) => {
-  try {
-    const result = await post("auth/register", registerData); // Gọi API register
-    return result;
-  } catch (error) {
-    throw new Error(error.message || "Đăng ký thất bại!");
+    } catch (error) {
+      return {
+        data: null,
+        error: error.message || 'Login failed'
+      };
+    }
   }
-};
 
-export const fetchUserProfile = async () => {
-  try {
-    const result = await get("auth/profile"); // Lấy thông tin user
-    return result;
-  } catch (error) {
-    throw new Error(error.message || "Không thể tải thông tin người dùng!");
+  // Registration method
+  async register(userData) {
+    try {
+      const response = await post('auth/register', userData);
+      console.log(response);
+      return response;
+    } catch (error) {
+      return {
+        data: null,
+        error: error.message || 'Registration failed'
+      };
+    }
   }
-};
 
-export const logout = async () => {
-  try {
-    await post("auth/logout", {}); // Gọi API logout
-    localStorage.removeItem("authToken"); // Xóa token khỏi localStorage
-  } catch (error) {
-    throw new Error("Đăng xuất thất bại!");
+  // Logout method
+  async logout() {
+    try {
+      // const response = await post('auth/logout');
+      // Clear user data from storage
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      
+      return response;
+    } catch (error) {
+      return {
+        data: null,
+        error: error.message || 'Logout failed'
+      };
+    }
   }
-};
+
+  // Get current user information
+  async getCurrentUser() {
+    try {
+      return JSON.parse(localStorage.getItem('user'));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Check if user is logged in
+  isLoggedIn() {
+    const user = this.getCurrentUser();
+    return !!user;
+  }
+}
+
+// Export a singleton instance
+export const authService = new AuthService();

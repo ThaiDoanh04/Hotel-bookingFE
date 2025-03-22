@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ux/toast/Toast';
-import { networkAdapter } from '../../../service/NetworkAdapter';
+import { get, patch } from '../../../utils/request';
 import Select from 'react-select';
 
 /**
@@ -60,7 +60,7 @@ const ProfileDetailsPanel = ({ userDetails }) => {
       country: nationality,
     };
     // Call the API to update the user details
-    const response = await networkAdapter.patch(
+    const response = await patch(
       '/api/users/update-profile',
       updatedUserDetails
     );
@@ -100,7 +100,7 @@ const ProfileDetailsPanel = ({ userDetails }) => {
 
   useEffect(() => {
     const fetchCountries = async () => {
-      const countriesData = await networkAdapter.get('/api/misc/countries');
+      const countriesData = await get('/api/misc/countries');
       if (countriesData && countriesData.data) {
         console.log('countriesData', countriesData.data);
         const mappedValues = countriesData.data.elements.map((country) => ({

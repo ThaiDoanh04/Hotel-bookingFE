@@ -2,7 +2,7 @@ import Review from './components/Review';
 import React, { useState } from 'react';
 import RatingsOverview from './components/RatingsOverview';
 import UserRatingsSelector from './components/UserRatingsSelector';
-import { networkAdapter } from '../../../../service/NetworkAdapter';
+import { put } from '../../../../utils/request';
 import Toast from '../../../../components/ux/toast/Toast';
 import PaginationController from '../../../../components/ux/PaginationController';
 import Loader from '../../../../components/ux/Loader';
@@ -50,7 +50,7 @@ const UserReviews = ({
       return;
     }
     // TODO: Add validation for userRating and userReview
-    const response = await networkAdapter.put('/api/hotel/add-review', {
+    const response = await put('/api/hotel/add-review', {
       rating: userRating,
       review: userReview,
     });

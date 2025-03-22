@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { networkAdapter } from '../../service/NetworkAdapter';
+import { post } from '../../utils/request';
 import validations from '../../utils/validations';
 import Toast from '../../components/ux/toast/Toast';
 
@@ -35,7 +35,7 @@ const ForgotPassword = () => {
     e.preventDefault();
 
     if (validations.validate('email', loginData.email)) {
-      const response = await networkAdapter.post('/api/forgot', loginData);
+      const response = await post('/api/forgot', loginData);
       if (response) {
         setsuccess(true);
       } else {
@@ -98,7 +98,7 @@ const ForgotPassword = () => {
                     className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
                   />
                   <p className="text-gray-700">
-                    We’ll send a verification code to this email if it matches
+                    We'll send a verification code to this email if it matches
                     an existing account.
                   </p>
                 </div>
