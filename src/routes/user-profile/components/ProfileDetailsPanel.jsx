@@ -86,15 +86,36 @@ const ProfileDetailsPanel = ({ userDetails }) => {
 
   // effect to set initial state of user details
   useEffect(() => {
-    if (userDetails) {
-      setFirstName(userDetails.firstName || '');
-      setLastName(userDetails.lastName || '');
-      setEmail(userDetails.email || '');
-      setPhoneNumber(userDetails.phone || '');
-      setNationality(userDetails.country || '');
-      setIsEmailVerified(userDetails.isEmailVerified || '');
-      setIsPhoneVerified(userDetails.isPhoneVerified || '');
-      setDateOfBirth(userDetails.dateOfBirth || '');
+    try {
+      // Lấy thông tin từ localStorage
+      const userDataString = localStorage.getItem('user');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        console.log('User data from localStorage:', userData); // Debug để xem dữ liệu
+        
+        // Cập nhật state với dữ liệu từ localStorage
+        setFirstName(userData.firstName || '');
+        setLastName(userData.lastName || '');
+        setEmail(userData.email || '');
+        setPhoneNumber(userData.phoneNumber || ''); // Lấy phone từ localStorage
+        setNationality(userData.country || '');
+        setIsEmailVerified(userData.isEmailVerified || false);
+        setIsPhoneVerified(userData.isPhoneVerified || false);
+        setDateOfBirth(userData.dateOfBirth || '');
+      }
+    } catch (error) {
+      console.error('Lỗi khi đọc dữ liệu từ localStorage:', error);
+      // Sử dụng dữ liệu từ userDetails nếu có lỗi
+      if (userDetails) {
+        setFirstName(userDetails.firstName || '');
+        setLastName(userDetails.lastName || '');
+        setEmail(userDetails.email || '');
+        setPhoneNumber(userDetails.phone || '');
+        setNationality(userDetails.country || '');
+        setIsEmailVerified(userDetails.isEmailVerified || false);
+        setIsPhoneVerified(userDetails.isPhoneVerified || false);
+        setDateOfBirth(userDetails.dateOfBirth || '');
+      }
     }
   }, [userDetails]);
 

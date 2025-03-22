@@ -19,7 +19,7 @@ import { formatPrice } from '../../utils/price-helpers';
  */
 const HotelViewCard = (props) => {
   const {
-    id: hotelCode,
+    id: hotelId,
     image,
     title,
     subtitle,
@@ -29,7 +29,7 @@ const HotelViewCard = (props) => {
   } = props;
   const navigate = useNavigate();
   const onBookNowClick = () => {
-    navigate(`/hotel/${hotelCode}`);
+    navigate(`/hotel/${hotelId}`);
   };
 
   return (
@@ -39,7 +39,7 @@ const HotelViewCard = (props) => {
     >
       <div className="cursor-pointer">
         <Link
-          to={`/hotel/${hotelCode}`}
+          to={`/hotel/${hotelId}`}
           className="block text-slate-700 hover:text-brand transition-colors duration-300"
         >
           <img
@@ -52,7 +52,7 @@ const HotelViewCard = (props) => {
       <div className="flex flex-col justify-between ml-0 md:ml-2 flex-1">
         <div>
           <Link
-            to={`/hotel/${hotelCode}`}
+            to={`/hotel/${hotelId}`}
             className="block text-slate-700 hover:text-brand transition-colors duration-300"
           >
             <h4 className="text-2xl font-bold text-slate-600">{title}</h4>
@@ -60,7 +60,7 @@ const HotelViewCard = (props) => {
           <p className="text-slate-600 text-sm">{subtitle}</p>
         </div>
         <ul>
-          {benefits.length > 0 &&
+          {benefits?.length > 0 &&
             benefits.map((benefit, index) => (
               <li className="text-green-800 font-medium text-sm" key={index}>
                 <FontAwesomeIcon icon={faCheck} /> {benefit}

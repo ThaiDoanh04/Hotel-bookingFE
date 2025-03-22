@@ -42,19 +42,48 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
     });
     const fetchHotelReviews = async () => {
       const response = await get(
-        `/api/hotel/${hotelDetails?.hotelCode}/reviews?currentPage=${currentReviewsPage}`
+        `api/hotels/${hotelDetails?.hotelId}/reviews?currentPage=${currentReviewsPage}`
       );
-      if (response && response.data) {
+      console.log(response);
+      if (response) {
+        // Tính toán metadata từ dữ liệu reviews
+        const totalRatings = response.reduce((acc, review) => acc + review.rating, 0);
+        const averageRating = response.length > 0 ? (totalRatings / response.length).toFixed(1) : 0;
+        
+        // Tạo starCounts
+        const initialCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        const starCounts = response.reduce((acc, review) => {
+          const ratingKey = review.rating.toString();
+          if (acc.hasOwnProperty(ratingKey)) {
+            acc[ratingKey]++;
+          }
+          return acc;
+        }, initialCounts);
+
+        // Tạo metadata và pagination
+        const metadata = {
+          totalReviews: response.length,
+          averageRating,
+          starCounts,
+        };
+
+        // Giả lập pagination nếu backend không cung cấp
+        const pagination = {
+          currentPage: currentReviewsPage,
+          totalPages: Math.ceil(response.length / 5),
+          pageSize: 5
+        };
+        
         setReviewData({
           isLoading: false,
-          data: response.data.elements,
-          metadata: response.metadata,
-          pagination: response.paging,
+          data: response,
+          metadata: metadata,
+          pagination: pagination
         });
       }
     };
     fetchHotelReviews();
-  }, [hotelDetails?.hotelCode, currentReviewsPage]);
+  }, [hotelDetails?.hotelId, currentReviewsPage]);
 
   return (
     <div className="flex items-start justify-center flex-wrap md:flex-nowrap container mx-auto p-4">
@@ -80,17 +109,20 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
               {hotelDetails?.subtitle}
             </p>
             <div className="mt-2 space-y-2">
-              {hotelDetails?.description.map((line, index) => (
+              {/* {hotelDetails?.description.map((line, index) => (
                 <p key={index} className="text-gray-700">
                   {line}
                 </p>
-              ))}
+              ))} */}
             </div>
             <div className="flex justify-between items-center mt-4">
               <div>
                 <p className="text-sm text-gray-600">
-                  {hotelDetails?.benefits.join(' | ')}
+                {hotelDetails?.benefits?.join(' | ') || 'Amenities information not available'}
                 </p>
+              </div>
+              <div className="text-xl font-bold text-red-600">
+                ${hotelDetails?.price} <span className="text-sm font-normal">per night</span>
               </div>
             </div>
           </div>
@@ -100,6 +132,7 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
           handlePageChange={handlePageChange}
           handlePreviousPageChange={handlePreviousPageChange}
           handleNextPageChange={handleNextPageChange}
+          hotelId={hotelDetails?.hotelId} 
         />
       </div>
       <HotelBookingDetailsCard hotelCode={hotelDetails?.hotelCode} />
