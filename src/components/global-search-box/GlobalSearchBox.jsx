@@ -35,13 +35,15 @@ const GlobalSearchBox = (props) => {
     dateRange,
   } = props;
   return (
-    <div className="flex flex-wrap flex-col lg:flex-row hero-content__search-box bg-white">
+    <div className="flex flex-wrap flex-col lg:flex-row hero-content__search-box bg-white p-2 rounded-lg gap-2">
       <Input
         size="sm"
         value={locationInputValue}
         typeheadResults={locationTypeheadResults}
         icon={faLocationDot}
         onChangeInput={onLocationChangeInput}
+        className="flex-1 border-2 border-yellow-400 rounded-md"
+        containerClassName="flex-1"
       />
       <DateRangePicker
         isDatePickerVisible={isDatePickerVisible}
@@ -57,9 +59,12 @@ const GlobalSearchBox = (props) => {
         placeholder="No. of guests"
         icon={faPerson}
         type="number"
+        className="flex-1 border-2 border-yellow-400 rounded-md"
+        containerClassName="flex-1"
       />
       <button
-        className="w-full md:w-auto sb__button--secondary bg-yellow-400 hover:bg-yellow-600 px-4 py-2 text-white"
+        className="flex-none w-full lg:w-auto px-6 py-2 bg-yellow-400 hover:bg-yellow-500 
+                 text-white font-medium rounded-md transition-colors duration-200"
         onClick={onSearchButtonAction}
       >
         SEARCH

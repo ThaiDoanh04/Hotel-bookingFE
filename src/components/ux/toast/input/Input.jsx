@@ -25,29 +25,32 @@ const Input = (props) => {
   };
 
   return (
-    <div className={`relative stay-booker-input__container w-full md:w-auto`}>
-      <input
-        className={`stay-booker__input w-full px-8 py-2 capitalize ${
-          classes ? classes : ''
-        }`}
-        type={type || 'text'}
-        value={value}
-        onChange={(e) => onChangeInput(e.target.value)}
-        placeholder={placeholder}
-        onBlur={onBlur}
-        onFocus={() => setIsTypeheadVisible(true)}
-      ></input>
-      {icon && (
-        <FontAwesomeIcon
-          icon={icon}
-          className="absolute transform-center-y left-4"
-          color="#074498"
-        />
-      )}
+    <div className="relative flex-1 mx-2 first:ml-0 last:mr-0">
+      <div className="flex w-full bg-white border-2 border-yellow-400 rounded-md overflow-hidden h-[48px]">
+        <div className="relative flex-1">
+          <input
+            className="w-full px-10 bg-white text-gray-700 placeholder-gray-400 
+                     focus:outline-none hover:bg-gray-50 transition-all duration-200 h-[48px]"
+            type={type || 'text'}
+            value={value}
+            onChange={(e) => onChangeInput(e.target.value)}
+            placeholder={placeholder}
+            onBlur={onBlur}
+            onFocus={() => setIsTypeheadVisible(true)}
+          />
+          {icon && (
+            <FontAwesomeIcon
+              icon={icon}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-600"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Typeahead Results */}
       <div
-        className={`z-10 absolute bg-white  w-full ${
-          isTypeheadVisible ? 'visible' : 'hidden'
-        }`}
+        className={`absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg
+                   ${isTypeheadVisible ? 'block' : 'hidden'}`}
       >
         <ul>
           {typeheadResults &&
@@ -55,7 +58,8 @@ const Input = (props) => {
             typeheadResults.map((result, index) => (
               <li
                 key={index}
-                className="text-base  text-slate-600 p-2 capitalize cursor-pointer border-b-2 hover:bg-slate-100"
+                className="px-4 py-2 text-gray-700 capitalize cursor-pointer hover:bg-gray-50 
+                         border-b border-gray-100 last:border-b-0"
                 onClick={() => onTypeheadResultClick(result)}
               >
                 {result}

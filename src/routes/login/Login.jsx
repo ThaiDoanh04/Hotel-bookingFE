@@ -2,11 +2,9 @@ import { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../../service/authService';
 import { AuthContext } from '../../contexts/AuthContext';
-import validations from '../../utils/validations';
 import Toast from '../../components/ux/toast/Toast';
-import { LOGIN_MESSAGES } from '../../utils/constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 /**
  * Login Component
@@ -22,7 +20,7 @@ const Login = () => {
     email: '',
     password: '',
   });
-
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   /**
@@ -40,19 +38,18 @@ const Login = () => {
    * Navigates to the user profile on successful login or sets an error message on failure.
    * @param {Object} e - The event object from the form submission.
    */
-  const handleLoginSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validations.validate('email', loginData.email)) {
+    try {
       const response = await authService.login(loginData);
-      console.log(response.token);
-      if (response && response.token && !response.error) {
+      if (response.error) {
+        setErrorMessage(response.error);
+      } else {
         triggerAuthCheck();
         navigate('/user-profile');
-      } else {
-        setErrorMessage(response.error || LOGIN_MESSAGES.FAILED);
       }
-    } else {
-      setErrorMessage(LOGIN_MESSAGES.FAILED);
+    } catch (error) {
+      setErrorMessage('Đăng nhập thất bại. Vui lòng thử lại.');
     }
   };
 
@@ -64,93 +61,137 @@ const Login = () => {
   };
 
   return (
-    <>
-      <div className="login__form">
-        <div className="container mx-auto p-4 flex justify-center min-h-[600px] items-center">
-          <form
-            onSubmit={handleLoginSubmit}
-            className="w-full max-w-lg p-4 md:p-10 shadow-md"
-          >
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-extrabold text-brand">
-                Welcome Back
-              </h2>
-              <p className="text-gray-500">
-                Log in to continue to your account
-              </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-lg shadow-2xl p-8 space-y-8">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+              <FontAwesomeIcon icon={faLock} className="text-indigo-600 text-2xl" />
             </div>
-            <div className="mb-6">
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={loginData.email}
-                onChange={handleInputChange}
-                autoComplete="username"
-                className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-              />
+            <h2 className="text-3xl font-extrabold text-gray-900">
+              Đăng nhập
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Đăng nhập để tiếp tục với tài khoản của bạn
+            </p>
+          </div>
+
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FontAwesomeIcon icon={faEnvelope} className="text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={loginData.email}
+                    onChange={handleInputChange}
+                    className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 
+                             rounded-md placeholder-gray-500 text-gray-900 
+                             focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                             focus:border-indigo-500 transition-all duration-200 sm:text-sm"
+                    placeholder="Nhập email của bạn"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Mật khẩu
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FontAwesomeIcon icon={faLock} className="text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={loginData.password}
+                    onChange={handleInputChange}
+                    className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 
+                             rounded-md placeholder-gray-500 text-gray-900 
+                             focus:outline-none focus:ring-2 focus:ring-indigo-500 
+                             focus:border-indigo-500 transition-all duration-200 sm:text-sm"
+                    placeholder="Nhập mật khẩu"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <FontAwesomeIcon 
+                      icon={showPassword ? faEyeSlash : faEye}
+                      className="text-gray-400 hover:text-gray-500"
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="mb-6">
-              <input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={loginData.password}
-                onChange={handleInputChange}
-                autoComplete="current-password"
-                className="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white"
-              />
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                  Ghi nhớ đăng nhập
+                </label>
+              </div>
+
+              <div className="text-sm">
+                <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+                  Quên mật khẩu?
+                </Link>
+              </div>
             </div>
-            {errorMessage && (
+
+            <div>
+              <button
+                type="submit"
+                className="w-full flex justify-center py-3 px-4 border border-transparent 
+                         text-sm font-medium rounded-md text-white bg-indigo-600 
+                         hover:bg-indigo-700 focus:outline-none focus:ring-2 
+                         focus:ring-offset-2 focus:ring-indigo-500 
+                         transition-colors duration-200"
+              >
+                Đăng nhập
+              </button>
+            </div>
+          </form>
+
+          {errorMessage && (
+            <div className="mt-4">
               <Toast
                 type="error"
                 message={errorMessage}
                 dismissError={dismissError}
               />
-            )}
-            <div className="items-center">
-              <div>
-                <button
-                  type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-                >
-                  Log In
-                </button>
-              </div>
-              <div className="flex flex-wrap justify-center my-3 w-full">
-                <Link
-                  to="/forgot-password"
-                  className="inline-block align-baseline text-md text-gray-500 hover:text-blue-800 text-right"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
-              <div className="relative">
-                <div className="absolute left-0 right-0 flex justify-center items-center">
-                  <div className="border-t w-full absolute"></div>
-                  <span className="bg-white px-3 text-gray-500 z-10">
-                    New to Stay Booker?
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap justify-center my-3 w-full mt-12">
-                <Link
-                  to="/register"
-                  className="inline-block align-baseline font-medium text-md text-brand hover:text-blue-800 text-right"
-                >
-                  Create an account
-                </Link>
-              </div>
             </div>
-          </form>
+          )}
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Chưa có tài khoản?{' '}
+            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Đăng ký ngay
+            </Link>
+          </p>
         </div>
       </div>
-      <div className="bg-slate-50 flex flex-col mx-auto w-full max-w-lg px-4">
-        <small className="text-slate-600">test user details</small>
-        <small className="text-slate-600">Email: user1@example.com</small>
-        <small className="text-slate-600">Password: password1</small>
-      </div>
-    </>
+    </div>
   );
 };
 
