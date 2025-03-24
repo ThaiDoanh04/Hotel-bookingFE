@@ -10,8 +10,10 @@ import { parse } from 'date-fns';
 import PaginationController from '../../components/ux/PaginationController';
 import { SORTING_FILTER_LABELS } from '../../utils/constants';
 import _debounce from 'lodash/debounce';
+import Select from 'react-select';
 
 const HotelsSearch = () => {
+    // 1. Khai báo states
     const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
     const [locationInputValue, setLocationInputValue] = useState('');
     const [numGuestsInputValue, setNumGuestsInputValue] = useState('');
@@ -23,7 +25,6 @@ const HotelsSearch = () => {
     const [sortByFilterValue, setSortByFilterValue] = useState({ value: 'default', label: 'Sort by' });
     const [selectedFiltersState, setSelectedFiltersState] = useState([]);
     const [filteredTypeheadResults, setFilteredTypeheadResults] = useState([]);
-    const debounceFn = useCallback(_debounce(queryResults, 1000), []);
     const [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation();
 
@@ -59,14 +60,127 @@ const HotelsSearch = () => {
         { value: 'priceHighToLow', label: SORTING_FILTER_LABELS.PRICE_HIGH_TO_LOW },
     ];
 
-    const onSortingFilterChange = (selectedOption) => {
+    const handleSortChange = useCallback((selectedOption) => {
         setSortByFilterValue(selectedOption);
-        setTimeout(() => updateSearchParams(), 0);
+        
+        // Cập nhật URL và gọi API ngay lập tức
+        const params = new URLSearchParams(searchParams);
+        
+        if (selectedOption.value !== 'default') {
+            params.set('sortBy', selectedOption.value.startsWith('price') ? 'price' : 'rating');
+            params.set('sortDirection', selectedOption.value.endsWith('HighToLow') ? 'desc' : 'asc');
+        } else {
+            params.delete('sortBy');
+            params.delete('sortDirection');
+        }
+        
+        setSearchParams(params);
+
+        // Chuẩn bị filters cho API call
+        const filters = {};
+        for (const [key, value] of params.entries()) {
+            if (key === 'starRatings') {
+                filters[key] = value.split(',').map(Number);
+            } else if (key === 'priceRange') {
+                const [min, max] = value.split(',');
+                filters.minPrice = parseFloat(min);
+                filters.maxPrice = parseFloat(max);
+            } else if (!['sortBy', 'sortDirection'].includes(key)) {
+                filters[key] = value;
+            }
+        }
+
+        // Thêm ngày check-in/check-out nếu có
+        if (dateRange[0]?.startDate && dateRange[0]?.endDate) {
+            filters.checkInDate = formatDate(dateRange[0].startDate);
+            filters.checkOutDate = formatDate(dateRange[0].endDate);
+        }
+
+        fetchHotels(filters);
+    }, [searchParams, dateRange, setSearchParams]);
+
+    // 2. Khai báo fetchHotels trước
+    const fetchHotels = async (filters) => {
+        setHotelsResults(prev => ({ ...prev, isLoading: true }));
+
+        try {
+            const queryParams = new URLSearchParams();
+
+            // Xử lý các filters
+            if (filters) {
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (key === 'starRatings') {
+                        queryParams.set(key, Array.isArray(value) ? value.join(',') : value);
+                    } else if (Array.isArray(value)) {
+                        queryParams.set(key, value.join(','));
+                    } else {
+                        queryParams.set(key, value);
+                    }
+                });
+            }
+
+            // Thêm params cho phân trang
+            queryParams.set('page', String(currentResultsPage - 1));
+
+            // Thêm params cho sort
+            if (sortByFilterValue.value !== 'default') {
+                queryParams.set('sortBy', sortByFilterValue.value.startsWith('price') ? 'price' : 'rating');
+                queryParams.set('sortDirection', sortByFilterValue.value.endsWith('HighToLow') ? 'desc' : 'asc');
+            }
+
+            const url = `api/hotels?${queryParams.toString()}`;
+            console.log('Fetching hotels with URL:', url);
+
+            const hotelsResultsResponse = await get(url);
+
+            if (hotelsResultsResponse) {
+                setHotelsResults({
+                    isLoading: false,
+                    data: hotelsResultsResponse,
+                    errors: hotelsResultsResponse.errors || [],
+                    metadata: hotelsResultsResponse.metadata,
+                    pagination: hotelsResultsResponse.paging,
+                });
+            } else {
+                throw new Error("API response is empty");
+            }
+        } catch (error) {
+            console.error("Error fetching hotels:", error);
+            setHotelsResults({
+                isLoading: false,
+                data: [],
+                errors: [error.message || "Failed to fetch hotels"]
+            });
+        }
     };
 
-    const onFiltersUpdate = (updatedFilter) => {
+    // 3. Khai báo debouncedFetchHotels sau khi có fetchHotels
+    const debouncedFetchHotels = useCallback(
+        _debounce((filters) => {
+            fetchHotels(filters);
+        }, 500),
+        [fetchHotels] // Thêm fetchHotels vào dependencies
+    );
+
+    // 4. Các hàm xử lý filters
+    const getActiveFiltersFromState = (state) => {
+        const filters = {};
+        state.forEach((category) => {
+            const selectedValues = category.filters
+                .filter((filter) => filter.isSelected)
+                .map((filter) => filter.value);
+
+            if (selectedValues.length > 0) {
+                filters[category.filterId] = selectedValues;
+            }
+        });
+        return isEmpty(filters) ? null : filters;
+    };
+
+    const onFiltersUpdate = useCallback((updatedFilter) => {
+        // Cập nhật state filters
         setSelectedFiltersState(prevState => {
-            return prevState.map(filterGroup => {
+            const newState = prevState.map(filterGroup => {
                 if (filterGroup.filterId === updatedFilter.filterId) {
                     return {
                         ...filterGroup,
@@ -80,10 +194,54 @@ const HotelsSearch = () => {
                 }
                 return filterGroup;
             });
-        });
 
-        setTimeout(() => updateSearchParams(), 0);
-    };
+            // Lấy filters đang active
+            const activeFilters = getActiveFiltersFromState(newState);
+            const params = new URLSearchParams(searchParams);
+
+            // Xử lý params URL
+            if (activeFilters) {
+                Object.entries(activeFilters).forEach(([key, values]) => {
+                    if (key === 'starRatings') {
+                        params.set(key, values.join(','));
+                    } else if (key === 'priceRange' && values.length > 0) {
+                        params.set(key, values[0]);
+                    }
+                });
+            } else {
+                params.delete('starRatings');
+                params.delete('priceRange');
+            }
+
+            // Cập nhật URL
+            setSearchParams(params);
+
+            // Chuẩn bị filters cho API call
+            const filters = {};
+            for (const [key, value] of params.entries()) {
+                if (key === 'starRatings') {
+                    filters[key] = value.split(',').map(Number);
+                } else if (key === 'priceRange') {
+                    const [min, max] = value.split(',');
+                    filters.minPrice = parseFloat(min);
+                    filters.maxPrice = parseFloat(max);
+                } else if (key !== 'sortBy' && key !== 'sortDirection') {
+                    filters[key] = value;
+                }
+            }
+
+            // Thêm ngày check-in/check-out nếu có
+            if (dateRange[0]?.startDate && dateRange[0]?.endDate) {
+                filters.checkInDate = formatDate(dateRange[0].startDate);
+                filters.checkOutDate = formatDate(dateRange[0].endDate);
+            }
+
+            // Gọi API ngay lập tức thay vì dùng debounce
+            fetchHotels(filters);
+
+            return newState;
+        });
+    }, [searchParams, dateRange, fetchHotels]);
 
     const onDateChangeHandler = (ranges) => {
         setDateRange([ranges.selection]);
@@ -93,27 +251,13 @@ const HotelsSearch = () => {
         updateSearchParams();
     };
 
-    const getActiveFilters = () => {
-        const filters = {};
-        selectedFiltersState.forEach((category) => {
-            const selectedValues = category.filters
-                .filter((filter) => filter.isSelected)
-                .map((filter) => filter.value);
-
-            if (selectedValues.length > 0) {
-                filters[category.filterId] = selectedValues;
-            }
-        });
-        return isEmpty(filters) ? null : filters;
-    };
-
     const onDatePickerIconClick = () => {
         setisDatePickerVisible(!isDatePickerVisible);
     };
 
     const onLocationChangeInput = async (newValue) => {
         setLocationInputValue(newValue);
-        debounceFn(newValue, availableCities);
+        queryResults(newValue, availableCities);
     };
 
     function queryResults(query, availableCities) {
@@ -138,61 +282,6 @@ const HotelsSearch = () => {
         });
 
         setTimeout(() => updateSearchParams(), 0);
-    };
-
-    const fetchHotels = async (filters) => {
-        setHotelsResults({ isLoading: true, data: [], errors: [] });
-
-        let url = 'api/hotels?';
-
-        if (filters) {
-            Object.keys(filters).forEach(key => {
-                if (Array.isArray(filters[key])) {
-                    filters[key].forEach(value => {
-                        url += `${key}=${encodeURIComponent(value)}&`;
-                    });
-                } else {
-                    url += `${key}=${encodeURIComponent(filters[key])}&`;
-                }
-            });
-        }
-
-        url += `page=${currentResultsPage - 1}&`;
-
-        if (sortByFilterValue.value !== 'default') {
-            url += `sortBy=${sortByFilterValue.value.startsWith('price') ? 'price' : 'rating'}&`;
-            url += `sortDirection=${sortByFilterValue.value.endsWith('HighToLow') ? 'desc' : 'asc'}&`;
-        }
-
-        url = url.slice(0, -1);
-
-        try {
-            const hotelsResultsResponse = await get(url);
-
-            if (hotelsResultsResponse) {
-                setHotelsResults({
-                    isLoading: false,
-                    data: hotelsResultsResponse,
-                    errors: hotelsResultsResponse.errors || [],
-                    metadata: hotelsResultsResponse.metadata,
-                    pagination: hotelsResultsResponse.paging,
-                });
-            } else {
-                console.error("API response is null or undefined");
-                setHotelsResults({
-                    isLoading: false,
-                    data: [],
-                    errors: ["API response is empty"]
-                });
-            }
-        } catch (error) {
-            console.error("Error fetching hotels:", error);
-            setHotelsResults({
-                isLoading: false,
-                data: [],
-                errors: ["Failed to fetch hotels"]
-            });
-        }
     };
 
     const handlePageChange = (page) => {
@@ -225,7 +314,7 @@ const HotelsSearch = () => {
             params.set('sortDirection', sortByFilterValue.value.endsWith('HighToLow') ? 'desc' : 'asc');
         }
 
-        const activeFilters = getActiveFilters();
+        const activeFilters = getActiveFiltersFromState(selectedFiltersState);
         if (activeFilters) {
             Object.entries(activeFilters).forEach(([key, values]) => {
                 if (key === 'starRatings') {
@@ -307,49 +396,57 @@ const HotelsSearch = () => {
 
     useEffect(() => {
         const params = Object.fromEntries(searchParams.entries());
-
-        if (params.city) {
-            setLocationInputValue(params.city);
+        
+        const updates = {};
+        
+        if (params.city !== locationInputValue) {
+            updates.locationInput = params.city || '';
+        }
+        
+        if (params.numOfGuests !== numGuestsInputValue) {
+            updates.numGuests = params.numOfGuests || '';
+        }
+        
+        if (params.page && (parseInt(params.page, 10) + 1) !== currentResultsPage) {
+            updates.page = parseInt(params.page, 10) + 1;
         }
 
-        if (params.numOfGuests) {
-            setNumGuestsInputValue(params.numOfGuests);
-        }
-
-        if (params.page) {
-            setCurrentResultsPage(parseInt(params.page, 10) + 1);
-        }
-
-        if (params.sortBy && params.sortDirection) {
-            const sortValue = params.sortBy === 'price'
-                ? (params.sortDirection === 'asc' ? 'priceLowToHigh' : 'priceHighToLow')
-                : 'default';
-
-            const sortOption = sortingFilterOptions.find(opt => opt.value === sortValue);
-            if (sortOption) {
-                setSortByFilterValue(sortOption);
-            }
+        if (Object.keys(updates).length > 0) {
+            if (updates.locationInput !== undefined) setLocationInputValue(updates.locationInput);
+            if (updates.numGuests !== undefined) setNumGuestsInputValue(updates.numGuests);
+            if (updates.page !== undefined) setCurrentResultsPage(updates.page);
         }
 
         if (selectedFiltersState.length > 0) {
             setSelectedFiltersState(prevState => {
+                const needsUpdate = prevState.some(filterGroup => {
+                    const paramValues = params[filterGroup.filterId];
+                    if (!paramValues) return false;
+                    
+                    const selectedValues = paramValues.split(',');
+                    return filterGroup.filters.some(filter => 
+                        selectedValues.includes(String(filter.value)) !== filter.isSelected
+                    );
+                });
+
+                if (!needsUpdate) return prevState;
+
                 return prevState.map(filterGroup => {
                     const paramValues = params[filterGroup.filterId];
-                    if (paramValues) {
-                        const selectedValues = paramValues.split(',');
-                        return {
-                            ...filterGroup,
-                            filters: filterGroup.filters.map(filter => ({
-                                ...filter,
-                                isSelected: selectedValues.includes(String(filter.value)),
-                            })),
-                        };
-                    }
-                    return filterGroup;
+                    if (!paramValues) return filterGroup;
+
+                    const selectedValues = paramValues.split(',');
+                    return {
+                        ...filterGroup,
+                        filters: filterGroup.filters.map(filter => ({
+                            ...filter,
+                            isSelected: selectedValues.includes(String(filter.value)),
+                        })),
+                    };
                 });
             });
         }
-    }, [searchParams, selectedFiltersState.length]);
+    }, [searchParams]);
 
     useEffect(() => {
         if (!hotelsResults.isLoading) {
@@ -377,6 +474,27 @@ const HotelsSearch = () => {
         }
     }, []);
 
+    // Component cho phần sort
+    const SortByFilter = () => {
+        const sortOptions = [
+            { value: 'default', label: 'Sort by' },
+            { value: 'priceHighToLow', label: 'Price (High to Low)' },
+            { value: 'priceLowToHigh', label: 'Price (Low to High)' },
+            { value: 'ratingHighToLow', label: 'Rating (High to Low)' },
+            { value: 'ratingLowToHigh', label: 'Rating (Low to High)' }
+        ];
+
+        return (
+            <Select
+                value={sortByFilterValue}
+                onChange={handleSortChange}
+                options={sortOptions}
+                className="w-48"
+                classNamePrefix="select"
+            />
+        );
+    };
+
     return (
         <div className="hotels">
             <div className="bg-brand px-2 lg:h-[120px] h-[220px] flex items-center justify-center">
@@ -396,6 +514,9 @@ const HotelsSearch = () => {
             </div>
             <div className="my-4"></div>
             <div className="w-[180px]"></div>
+            <div className="flex justify-end mb-4">
+                <SortByFilter />
+            </div>
             <ResultsContainer
                 hotelsResults={hotelsResults}
                 enableFilters={true}
@@ -404,7 +525,7 @@ const HotelsSearch = () => {
                 onClearFiltersAction={onClearFiltersAction}
                 selectedFiltersState={selectedFiltersState}
                 sortByFilterValue={sortByFilterValue}
-                onSortingFilterChange={onSortingFilterChange}
+                onSortingFilterChange={handleSortChange}
                 sortingFilterOptions={sortingFilterOptions}
             />
             {hotelsResults.pagination?.totalPages > 1 && (
