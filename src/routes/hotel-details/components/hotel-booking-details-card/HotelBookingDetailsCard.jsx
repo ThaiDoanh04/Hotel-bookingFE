@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import { differenceInCalendarDays } from 'date-fns';
 import DateRangePicker from '../../../../components/ux/toast/date-range-picker/DateRangePicker';
-import { get } from '../../../../utils/request';
+import { get, post } from '../../../../utils/request';
 import { DEFAULT_TAX_DETAILS } from '../../../../utils/constants';
 import { useNavigate } from 'react-router-dom';
 import queryString from 'query-string';
@@ -25,6 +25,10 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   // State for error message
   const [errorMessage, setErrorMessage] = useState('');
 
+  // State for hotel details from API
+  const [hotelDetails, setHotelDetails] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // State for date range
   const [dateRange, setDateRange] = useState([
     {
@@ -36,8 +40,8 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
 
   // State for selected room, guests, and rooms
   const [selectedRoom, setSelectedRoom] = useState({
-    value: '1 King Bed Standard Non Smoking',
-    label: '1 King Bed Standard Non Smoking',
+    value: 'Standard Room',
+    label: 'Standard Room',
   });
   const [selectedGuests, setSelectedGuests] = useState({
     value: 2,
@@ -49,25 +53,25 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   });
 
   // State for pricing and booking details
-  const [total, setTotal] = useState(0);
-  const [taxes, setTaxes] = useState(0);
+  const [total, setTotal] = useState('0 VND');
+  const [taxes, setTaxes] = useState('0 VND');
   const [bookingPeriodDays, setBookingPeriodDays] = useState(1);
-  const [bookingDetails, setBookingDetails] = useState({});
 
-  // Options for guests and rooms
+  // Default options
   const guestOptions = Array.from(
-    { length: bookingDetails.maxGuestsAllowed },
-    (_, i) => ({ value: i + 1, label: `${i + 1} guest` })
+    { length: 10 },
+    (_, i) => ({ value: i + 1, label: `${i + 1} guests` })
   );
+  
   const roomNumberOptions = Array.from(
-    { length: bookingDetails.maxRoomsAllowedPerGuest },
-    (_, i) => ({ value: i + 1, label: `${i + 1} room` })
+    { length: 5 },
+    (_, i) => ({ value: i + 1, label: `${i + 1} room${i > 0 ? 's' : ''}` })
   );
+  
   const roomOptions = [
-    {
-      value: '1 King Bed Standard Non Smoking',
-      label: '1 King Bed Standard Non Smoking',
-    },
+    { value: 'Standard Room', label: 'Standard Room' },
+    { value: 'Deluxe Room', label: 'Deluxe Room' },
+    { value: 'Suite', label: 'Suite' },
   ];
 
   // Handlers for select changes
@@ -75,9 +79,11 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     setSelectedRoom(selectedOption);
     calculatePrices();
   };
+  
   const handleGuestsNumberChange = (selectedOption) => {
     setSelectedGuests(selectedOption);
   };
+  
   const handleRoomsNumberChange = (selectedOption) => {
     setSelectedRooms(selectedOption);
     calculatePrices();
@@ -95,11 +101,15 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
    */
   const onDateChangeHandler = (ranges) => {
     const { startDate, endDate } = ranges.selection;
+    console.log("Date range changed:", { startDate, endDate });
+    
     setDateRange([ranges.selection]);
     const days =
       startDate && endDate
         ? differenceInCalendarDays(endDate, startDate) + 1
         : 1;
+    console.log(`Booking period: ${days} days`);
+    
     setBookingPeriodDays(days);
     calculatePrices();
   };
@@ -108,44 +118,114 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
    * Calculates the total price and taxes based on the selected room and booking period.
    */
   const calculatePrices = () => {
-    const pricePerNight = bookingDetails.currentNightRate * selectedRooms.value;
-    const gstRate =
-      pricePerNight <= 2500 ? 0.12 : pricePerNight > 7500 ? 0.18 : 0.12;
+    if (!hotelDetails) return;
+    
+    console.log("Calculating prices with:", {
+      hotelDetails,
+      pricePerNight: hotelDetails.price,
+      rooms: selectedRooms.value,
+      days: bookingPeriodDays
+    });
+    
+    const pricePerNight = hotelDetails.price * selectedRooms.value;
+    const gstRate = 0.08; // 8% tax rate
     const totalGst = (pricePerNight * bookingPeriodDays * gstRate).toFixed(2);
     const totalPrice = (
       pricePerNight * bookingPeriodDays +
       parseFloat(totalGst)
     ).toFixed(2);
+    
+    console.log("Calculated prices:", {
+      pricePerNight,
+      totalGst,
+      totalPrice
+    });
+    
     if (!isNaN(totalPrice)) {
-      setTotal(`${formatPrice(totalPrice)} INR`);
+      setTotal(`${formatPrice(totalPrice)} VND`);
     }
-    setTaxes(`${formatPrice(totalGst)} INR`);
+    setTaxes(`${formatPrice(totalGst)} VND`);
   };
 
-  const onBookingConfirm = () => {
+  /**
+   * Xử lý xác nhận đặt phòng và tạo booking
+   */
+  const onBookingConfirm = async () => {
     if (!dateRange[0].startDate || !dateRange[0].endDate) {
-      setErrorMessage('Please select check-in and check-out dates.');
+      setErrorMessage('Vui lòng chọn ngày check-in và check-out.');
       return;
     }
-    const checkIn = format(dateRange[0].startDate, 'dd-MM-yyyy');
-    const checkOut = format(dateRange[0].endDate, 'dd-MM-yyyy');
-    const queryParams = {
-      hotelCode,
-      checkIn,
-      checkOut,
-      guests: selectedGuests.value,
-      rooms: selectedRooms.value,
-      hotelName: bookingDetails.name.replaceAll(' ', '-'), // url friendly hotel name
-    };
+    
+    if (!hotelDetails) {
+      setErrorMessage('Không thể tải thông tin khách sạn.');
+      return;
+    }
 
-    const url = `/checkout?${queryString.stringify(queryParams)}`;
-    navigate(url, {
-      state: {
-        total,
-        checkInTime: bookingDetails.checkInTime,
-        checkOutTime: bookingDetails.checkOutTime,
-      },
-    });
+    try {
+      setIsProcessing(true);
+      
+      // Format dữ liệu để gửi lên API
+      const checkIn = format(dateRange[0].startDate, 'dd-MM-yyyy');
+      const checkOut = format(dateRange[0].endDate, 'dd-MM-yyyy');
+      
+      const totalPriceValue = total.replace(/[^0-9.]/g, ''); // Chỉ lấy số từ chuỗi total
+      
+      const bookingData = {
+        hotelId: parseInt(hotelCode),
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        numOfGuests: selectedGuests.value,
+        numOfRooms: selectedRooms.value,
+        roomType: selectedRoom.value,
+        totalPrice: parseFloat(totalPriceValue),
+        taxAmount: parseFloat(taxes.replace(/[^0-9.]/g, '')),
+        totalNights: bookingPeriodDays,
+        pricePerNight: hotelDetails.price,
+        hotelName: hotelDetails.title,
+        city: hotelDetails.city || ''
+      };
+      
+      console.log("Sending booking data:", bookingData);
+      
+      // Gọi API để tạo booking
+      const response = await post('api/bookings/create', bookingData);
+      console.log("Booking response:", response);
+      
+      if (response && response.error) {
+        throw new Error(response.error || 'Đã xảy ra lỗi khi đặt phòng');
+      }
+      
+      // Chuẩn bị dữ liệu để chuyển đến trang checkout
+      const queryParams = {
+        bookingId: response?.id || response?.bookingId || Date.now(),
+        hotelCode,
+        checkIn,
+        checkOut,
+        guests: selectedGuests.value,
+        rooms: selectedRooms.value,
+        hotelName: hotelDetails.title?.replaceAll(' ', '-') || 'hotel',
+      };
+
+      // Chuyển hướng đến trang checkout
+      const url = `/checkout?${queryString.stringify(queryParams)}`;
+      navigate(url, {
+        state: {
+          bookingId: response?.id || response?.bookingId || Date.now(),
+          total,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          checkInTime: '14:00',
+          checkOutTime: '12:00',
+          bookingDetails: bookingData,
+          hotelDetails: hotelDetails
+        },
+      });
+    } catch (error) {
+      console.error("Error during booking:", error);
+      setErrorMessage(error.message || 'Có lỗi xảy ra khi đặt phòng. Vui lòng thử lại sau.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handler for dismissing error message
@@ -153,45 +233,58 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     setErrorMessage('');
   };
 
-  // Effect for initial price calculation
+  // Effect for fetching hotel details directly from the hotels API
   useEffect(() => {
-    calculatePrices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingPeriodDays, selectedRooms, selectedRoom, bookingDetails]);
-
-  // Effect for fetching booking details
-  useEffect(() => {
-    const getBookingDetails = async () => {
-      const response = await get(
-        `api/hotel/${hotelCode}/booking/enquiry`
-      );
-      if (response && response.data) {
-        setBookingDetails(response.data);
+    const getHotelDetails = async () => {
+      try {
+        console.log(`Fetching hotel details for ID: ${hotelCode}`);
+        const response = await get(`api/hotels/${hotelCode}`);
+        console.log('Hotel details response:', response);
+        
+        if (response) {
+          setHotelDetails(response);
+        } else {
+          throw new Error('Could not fetch hotel details');
+        }
+      } catch (error) {
+        console.error('Error fetching hotel details:', error);
+        setErrorMessage('Không thể lấy thông tin khách sạn. Vui lòng thử lại sau.');
       }
     };
-    getBookingDetails();
+    
+    if (hotelCode) {
+      getHotelDetails();
+    }
   }, [hotelCode]);
+
+  // Effect for calculating prices when dependencies change
+  useEffect(() => {
+    if (hotelDetails) {
+      calculatePrices();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelDetails, bookingPeriodDays, selectedRooms]);
 
   return (
     <div className="mx-2 bg-white shadow-xl rounded-xl overflow-hidden mt-2 md:mt-0 w-full md:w-[380px]">
-      <div className="px-6 py-4 bg-brand text-white">
-        <h2 className="text-xl font-bold">Booking Details</h2>
+      <div className="px-6 py-4 bg-brand">
+        <h2 className="text-xl font-bold">Chi tiết đặt phòng</h2>
       </div>
       <div className="p-6 text-sm md:text-base">
         {/* Total Price */}
         <div className="mb-4">
           <div className="text-lg font-semibold text-gray-800 mb-1">
-            Total Price
+            Tổng tiền
           </div>
           <div className="text-xl font-bold text-indigo-600">{total}</div>
           <div className="text-sm text-green-600">
-            {bookingDetails.cancellationPolicy}
+            Miễn phí hủy phòng trước 24 giờ
           </div>
         </div>
 
         {/* Dates & Time */}
         <div className="mb-4">
-          <div className="font-semibold text-gray-800">Dates & Time</div>
+          <div className="font-semibold text-gray-800">Ngày nhận và trả phòng</div>
           <div className="text-gray-600">
             <DateRangePicker
               isDatePickerVisible={isDatePickerVisible}
@@ -202,11 +295,16 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
               inputStyle="DARK"
             />
           </div>
+          {bookingPeriodDays > 0 && (
+            <div className="text-sm text-gray-600 mt-2">
+              Số đêm: <span className="font-bold">{bookingPeriodDays}</span>
+            </div>
+          )}
         </div>
 
         {/* Reservation */}
         <div className="mb-4">
-          <div className="font-semibold text-gray-800">Reservation</div>
+          <div className="font-semibold text-gray-800">Đặt chỗ</div>
           <Select
             value={selectedRooms}
             onChange={handleRoomsNumberChange}
@@ -222,7 +320,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
 
         {/* Room Type */}
         <div className="mb-4">
-          <div className="font-semibold text-gray-800">Room Type</div>
+          <div className="font-semibold text-gray-800">Loại phòng</div>
           <Select
             value={selectedRoom}
             onChange={handleRoomTypeChange}
@@ -232,18 +330,43 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
 
         {/* Per day rate */}
         <div className="mb-4">
-          <div className="font-semibold text-gray-800">Per day rate</div>
+          <div className="font-semibold text-gray-800">Giá mỗi đêm</div>
           <div className="text-gray-600">
-            {formatPrice(bookingDetails.currentNightRate)} INR
+            {hotelDetails ? `${formatPrice(hotelDetails.price)} VND` : 'Đang tải...'}
           </div>
         </div>
 
-        {/* Taxes */}
-        <div className="mb-4">
-          <div className="font-semibold text-gray-800">Taxes</div>
-          <div className="text-gray-600">{taxes}</div>
-          <div className="text-xs text-gray-500">{DEFAULT_TAX_DETAILS}</div>
-        </div>
+        {/* Chi tiết giá */}
+        {hotelDetails && (
+          <div className="mb-4">
+            <div className="font-semibold text-gray-800 mb-2">Chi tiết giá</div>
+            <div className="border rounded-md p-3 bg-gray-50">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Giá mỗi đêm:</span>
+                <span className="text-gray-800 font-medium">{formatPrice(hotelDetails.price)} VND</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Số phòng:</span>
+                <span className="text-gray-800 font-medium">{selectedRooms.value}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Số đêm:</span>
+                <span className="text-gray-800 font-medium">{bookingPeriodDays}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Thuế & phí (8%):</span>
+                <span className="text-gray-800 font-medium">{taxes}</span>
+              </div>
+              <div className="border-t pt-2 mt-2 flex justify-between font-bold">
+                <span className="text-gray-800">Tổng cộng:</span>
+                <span className="text-indigo-600">{total}</span>
+              </div>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {DEFAULT_TAX_DETAILS || 'Giá đã bao gồm thuế và phí dịch vụ.'}
+            </div>
+          </div>
+        )}
 
         {errorMessage && (
           <Toast
@@ -256,9 +379,25 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       <div className="px-6 py-4 bg-gray-50">
         <button
           onClick={onBookingConfirm}
-          className="w-full bg-brand-secondary text-white py-2 rounded hover:bg-yellow-600 transition duration-300"
+          disabled={isProcessing || !hotelDetails}
+          className={`w-full py-2 rounded transition duration-300 flex items-center justify-center
+            ${isProcessing || !hotelDetails
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}
         >
-          Confirm Booking
+          {isProcessing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Đang xử lý...
+            </>
+          ) : !hotelDetails ? (
+            'Đang tải thông tin...'
+          ) : (
+            'Xác nhận đặt phòng'
+          )}
         </button>
       </div>
     </div>

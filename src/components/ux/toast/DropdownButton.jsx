@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useContext } from 'react';
 import useOutsideClickHandler from '../../../hooks/UseOutSideClickHandler';
+import { AuthContext } from '../../../contexts/AuthContext';
 
 const DropdownButton = (props) => {
   const triggerType = props.triggerType || 'click';
@@ -8,6 +9,7 @@ const DropdownButton = (props) => {
   const buttonRef = useRef();
   const [isDropdownContainerVisible, setIsDropdownContainerVisible] =
     useState(false);
+  const { user } = useContext(AuthContext);
 
   const onDropdownClickTrigger = () => {
     triggerType === 'click' &&
@@ -24,6 +26,22 @@ const DropdownButton = (props) => {
       setIsDropdownContainerVisible(false);
     }
   });
+
+  const getDropdownOptions = () => {
+    let options = props.options || [];
+    
+    if (user?.role === 'admin') {
+      options = [
+        {
+          name: 'Trang quản trị',
+          onClick: () => window.location.href = '/admin'
+        },
+        ...options
+      ];
+    }
+    
+    return options;
+  };
 
   return (
     <div className="relative">
@@ -57,25 +75,25 @@ const DropdownButton = (props) => {
         ref={wrapperRef}
         className={`dropdown-trigger__container z-10 ${
           isDropdownContainerVisible ? 'visible' : 'hidden'
-        } bg-white divide-y divide-gray-100 rounded-lg shadow w-44  absolute`}
+        } bg-white divide-y divide-gray-100 rounded-lg shadow-lg w-44 absolute`}
       >
         <ul
-          className="py-2 text-sm text-gray-700"
+          className="py-1 text-sm text-gray-700"
           aria-labelledby="dropdownDefaultButton"
         >
-          {props.options &&
-            props.options.map((option, index) => (
-              <li key={index}>
-                <button
-                  onClick={() => {
-                    onDropdownItemClick(option.onClick);
-                  }}
-                  className="w-full block text-left px-4 py-2 hover:bg-brand  dark:hover:text-white"
-                >
-                  {option.name}
-                </button>
-              </li>
-            ))}
+          {getDropdownOptions().map((option, index) => (
+            <li key={index}>
+              <button
+                onClick={() => {
+                  onDropdownItemClick(option.onClick);
+                }}
+                className="w-full block text-left px-4 py-2.5 hover:bg-gray-50 transition-colors duration-150 
+                           hover:text-brand border-l-2 border-transparent hover:border-brand"
+              >
+                {option.name}
+              </button>
+            </li>
+          ))}
         </ul>
       </div>
     </div>

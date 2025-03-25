@@ -1,4 +1,4 @@
-import { faStar, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faCheck, faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../utils/price-helpers';
@@ -34,55 +34,88 @@ const HotelViewCard = (props) => {
 
   return (
     <div
-      className="card border p-4 flex flex-col md:flex-row gap-x-2 w-full"
+      className="card bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 p-4 flex flex-col md:flex-row gap-4 w-full mb-4"
       data-testid="hotel-view-card"
     >
-      <div className="cursor-pointer">
+      {/* Phần ảnh khách sạn */}
+      <div className="md:w-[250px] flex-shrink-0 overflow-hidden rounded-lg">
         <Link
           to={`/hotel/${hotelId}`}
-          className="block text-slate-700 hover:text-brand transition-colors duration-300"
+          className="block overflow-hidden rounded-lg"
         >
           <img
-            src={image.imageUrl}
-            alt={image.accessibleText}
-            className="md:w-[220px] md:h-[140px]"
+            src={image}
+            alt={title}
+            className="w-full h-[180px] md:h-[200px] object-cover hover:scale-105 transition-transform duration-500"
           />
         </Link>
       </div>
-      <div className="flex flex-col justify-between ml-0 md:ml-2 flex-1">
-        <div>
+
+      {/* Phần thông tin khách sạn */}
+      <div className="flex flex-col justify-between flex-1">
+        <div className="space-y-2">
           <Link
             to={`/hotel/${hotelId}`}
-            className="block text-slate-700 hover:text-brand transition-colors duration-300"
+            className="block text-slate-800 hover:text-indigo-600 transition-colors duration-300"
           >
-            <h4 className="text-2xl font-bold text-slate-600">{title}</h4>
+            <h4 className="text-xl md:text-2xl font-bold">{title}</h4>
           </Link>
-          <p className="text-slate-600 text-sm">{subtitle}</p>
-        </div>
-        <ul>
-          {benefits?.length > 0 &&
-            benefits.map((benefit, index) => (
-              <li className="text-green-800 font-medium text-sm" key={index}>
-                <FontAwesomeIcon icon={faCheck} /> {benefit}
-              </li>
-            ))}
-        </ul>
-      </div>
-      <div className="flex flex-col ml-0 md:ml-auto justify-between border-l-0 md:border-l-2 items-stretch pl-0 md:pl-4">
-        <div className="flex justify-between my-3 md:my-0 items-center md:flex-col md:justify-between w-full h-full">
-          <h4 className="font-medium text-sm text-white bg-blue-600 p-2">
-            {ratings} <FontAwesomeIcon icon={faStar} />
-          </h4>
-          <p className="text-slate-600 font-bold whitespace-nowrap">
-            {formatPrice(price)} VND
+          
+          <p className="text-gray-500 text-sm flex items-center">
+            <FontAwesomeIcon icon={faLocationDot} className="mr-1 text-gray-400" /> 
+            {subtitle}
           </p>
+          
+          {/* Benefits */}
+          <div className="mt-4">
+            {benefits?.length > 0 && (
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 mt-2">
+                {benefits.map((benefit, index) => (
+                  <li 
+                    className="text-gray-700 text-sm flex items-start" 
+                    key={index}
+                  >
+                    <FontAwesomeIcon 
+                      icon={faCheck} 
+                      className="text-green-500 mt-1 mr-2" 
+                    /> 
+                    <span>{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-        <button
-          className=" bg-yellow-500 px-4 py-2 text-white whitespace-nowrap"
-          onClick={onBookNowClick}
-        >
-          Book now
-        </button>
+      </div>
+
+      {/* Phần giá và nút đặt phòng */}
+      <div className="flex flex-col md:w-[180px] md:border-l border-gray-200 md:pl-4 flex-shrink-0">
+        <div className="flex flex-col h-full justify-between">
+          {/* Đánh giá */}
+          <div className="flex md:flex-col items-center md:items-end gap-2">
+            <div className="flex items-center">
+              <span className="bg-blue-600 text-white font-bold px-2 py-1 rounded text-sm flex items-center">
+                {ratings} <FontAwesomeIcon icon={faStar} className="ml-1 text-yellow-300" />
+              </span>
+            </div>
+            
+            {/* Giá */}
+            <div className="ml-auto md:ml-0 md:mt-4 text-right">
+              <p className="font-bold text-lg md:text-xl text-indigo-600">
+                {formatPrice(price)} VND
+              </p>
+              <p className="text-xs text-gray-500">Giá mỗi đêm</p>
+            </div>
+          </div>
+
+          {/* Nút đặt phòng */}
+          <button
+            className="mt-4 bg-yellow-500 hover:bg-yellow-600 px-4 py-3 text-white rounded-md font-medium transition-colors duration-300 w-full"
+            onClick={onBookNowClick}
+          >
+            Đặt ngay
+          </button>
+        </div>
       </div>
     </div>
   );

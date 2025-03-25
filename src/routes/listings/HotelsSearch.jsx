@@ -106,15 +106,18 @@ const HotelsSearch = () => {
         try {
             const queryParams = new URLSearchParams();
 
-            // Xử lý các filters
+            // Xử lý các filters nếu có
             if (filters) {
                 Object.entries(filters).forEach(([key, value]) => {
-                    if (key === 'starRatings') {
-                        queryParams.set(key, Array.isArray(value) ? value.join(',') : value);
-                    } else if (Array.isArray(value)) {
-                        queryParams.set(key, value.join(','));
-                    } else {
-                        queryParams.set(key, value);
+                    // Chỉ thêm các filter có giá trị
+                    if (value !== undefined && value !== null && value !== '') {
+                        if (key === 'starRatings') {
+                            queryParams.set(key, Array.isArray(value) ? value.join(',') : value);
+                        } else if (Array.isArray(value)) {
+                            queryParams.set(key, value.join(','));
+                        } else {
+                            queryParams.set(key, value);
+                        }
                     }
                 });
             }
@@ -469,8 +472,12 @@ const HotelsSearch = () => {
 
         getCities();
 
+        // Gọi API ngay cả khi không có searchParams
         if (searchParams.toString()) {
             fetchHotelsFromParams();
+        } else {
+            // Nếu không có searchParams, vẫn gọi API để lấy tất cả khách sạn
+            fetchHotels({});
         }
     }, []);
 

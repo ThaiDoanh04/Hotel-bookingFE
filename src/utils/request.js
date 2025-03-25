@@ -21,6 +21,27 @@ export const post = async (path, options) => {
     return result;
 }
 
+// Hàm mới cho upload file
+export const uploadFile = async (path, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch((API_DOMAIN + path), {
+        method: "POST",
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            // Không set Content-Type, để browser tự xử lý với FormData
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error('Upload failed');
+    }
+
+    const result = await response.json();
+    return result;
+}
 
 export const del = async (path) => {
     const response = await fetch((API_DOMAIN + path), {

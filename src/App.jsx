@@ -11,7 +11,7 @@ import UserProfile from './routes/user-profile/UserProfile';
 import HotelsSearch from './routes/listings/HotelsSearch';
 import OTPVerification from './routes/forgot-password/OTPVerification';
 import ResetPassword from './routes/forgot-password/ResetPassword';
-
+import Admin from './routes/admin/Admin';
 function App() {
   return (
     <Routes>
@@ -27,6 +27,7 @@ function App() {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="user-profile" element={<UserProfile />} />
       </Route>
+      <Route path="/admin/*" element={<Admin />} />
     </Routes>
   );
 }

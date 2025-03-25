@@ -3,11 +3,14 @@ import UserReviews from '../user-reviews/UserReviews';
 import { get } from '../../../../utils/request';
 import React, { useEffect, useState } from 'react';
 import ReactImageGallery from 'react-image-gallery';
+import { formatPrice } from '../../../../utils/price-helpers';
 
 const HotelDetailsViewCard = ({ hotelDetails }) => {
+  console.log("HotelDetailsViewCard - hotelDetails:", hotelDetails);
+
   const images = hotelDetails?.images?.map((image) => ({
-    original: image.imageUrl,
-    thumbnail: image.imageUrl,
+    original: image,
+    thumbnail: image,
     thumbnailClass: 'h-[80px]',
     thumbnailLoading: 'lazy',
   })) || []; 
@@ -121,8 +124,8 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
                 {hotelDetails?.benefits?.join(' | ') || 'Amenities information not available'}
                 </p>
               </div>
-              <div className="text-xl font-bold text-red-600">
-                ${hotelDetails?.price} <span className="text-sm font-normal">per night</span>
+              <div className="text-xl font-bold text-red-500">
+                {hotelDetails?.price ? `${formatPrice(hotelDetails.price)} VND` : ''} <span className="text-sm font-normal">per night</span>
               </div>
             </div>
           </div>
@@ -135,7 +138,7 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
           hotelId={hotelDetails?.hotelId} 
         />
       </div>
-      <HotelBookingDetailsCard hotelCode={hotelDetails?.hotelCode} />
+      <HotelBookingDetailsCard hotelCode={hotelDetails?.hotelId} />
     </div>
   );
 };

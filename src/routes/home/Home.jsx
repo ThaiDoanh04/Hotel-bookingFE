@@ -140,6 +140,10 @@ const Home = () => {
     getInitialData();
   }, []);
 
+  useEffect(() => {
+    console.log("Current hotelsResults state:", hotelsResults);
+  }, [hotelsResults]);
+
   return (
     <>
       <HeroCover
