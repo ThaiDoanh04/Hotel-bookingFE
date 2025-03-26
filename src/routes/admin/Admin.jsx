@@ -10,26 +10,12 @@ const { Content } = Layout;
 
 function Admin() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const location = useLocation();
 
   useEffect(() => {
     console.log("Admin component mounted");
     console.log("Current path:", location.pathname);
   }, [location]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setIsSidebarCollapsed(false);
-      }
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const handleCollapse = (collapsed) => {
     setIsSidebarCollapsed(collapsed);
@@ -39,13 +25,11 @@ function Admin() {
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar onCollapse={handleCollapse} />
       <Layout
-        className={`transition-all duration-300 ${
-          isMobile ? "ml-0" : isSidebarCollapsed ? "ml-[80px]" : "ml-[250px]"
-        }`}
+        className="transition-all duration-300"
+        style={{ minWidth: '1024px' }}
       >
         <Content 
           style={{ 
-            margin: '24px 16px', 
             padding: 24, 
             background: '#fff',
             borderRadius: '4px',

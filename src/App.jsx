@@ -12,6 +12,7 @@ import HotelsSearch from './routes/listings/HotelsSearch';
 import OTPVerification from './routes/forgot-password/OTPVerification';
 import ResetPassword from './routes/forgot-password/ResetPassword';
 import Admin from './routes/admin/Admin';
+import Checkout from './routes/checkout/Checkout';
 function App() {
   return (
     <Routes>
@@ -26,6 +27,7 @@ function App() {
         <Route path="verify-otp" element={<OTPVerification />} />
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="user-profile" element={<UserProfile />} />
+        <Route path="checkout" element={<Checkout />} />
       </Route>
       <Route path="/admin/*" element={<Admin />} />
     </Routes>

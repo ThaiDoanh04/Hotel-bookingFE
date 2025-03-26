@@ -17,7 +17,7 @@ const Home = () => {
 
   // State variables
   const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
-  const [locationInputValue, setLocationInputValue] = useState('pune');
+  const [locationInputValue, setLocationInputValue] = useState('');
   const [numGuestsInputValue, setNumGuestsInputValue] = useState('');
   const [popularDestinationsData, setPopularDestinationsData] = useState({
     isLoading: true,
@@ -92,14 +92,34 @@ const Home = () => {
     const checkInDate = formatDate(dateRange[0].startDate) ?? '';
     const checkOutDate = formatDate(dateRange[0].endDate) ?? '';
     const city = locationInputValue;
-    navigate('/hotels', {
-      state: {
-        numGuest,
-        checkInDate,
-        checkOutDate,
-        city,
-      },
-    });
+    
+    // Tạo query params thay vì dùng state
+    const params = new URLSearchParams();
+    
+    // Thêm các tham số vào URL
+    if (city) {
+      params.append('city', city);
+    }
+    
+    if (numGuest > 0) {
+      params.append('numOfGuests', numGuest);
+    }
+    
+    if (checkInDate) {
+      params.append('checkInDate', checkInDate);
+    }
+    
+    if (checkOutDate) {
+      params.append('checkOutDate', checkOutDate);
+    }
+    
+    // Chuyển hướng đến trang hotels với query params
+    // Nếu không có tham số nào, chỉ chuyển đến /hotels
+    if (params.toString()) {
+      navigate(`/hotels?${params.toString()}`);
+    } else {
+      navigate('/hotels');
+    }
   };
 
   useEffect(() => {
@@ -108,26 +128,59 @@ const Home = () => {
      * @returns {Promise<void>} A promise that resolves when the data is fetched.
      */
     const getInitialData = async () => {
-      // const popularDestinationsResponse = await get(
-      //   'api/popularDestinations'
-      // );
-      const hotelsResultsResponse =
-        await get('api/hotels');
+      // Mock dữ liệu popularDestinations thay vì gọi API
+      const mockPopularDestinationsResponse = {
+        data: {
+          elements: [
+            {
+              code: 1,
+              name: "Hà Nội",
+              imageUrl: "https://imgcy.trivago.com/c_fill,d_dummy.jpeg,e_sharpen:60,f_auto,h_258,q_auto,w_258/categoryimages/68/08/68088_v59.jpeg"
+            },
+            {
+              code: 2,
+              name: "Đà Nẵng",
+              imageUrl: "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b"
+            },
+            {
+              code: 3,
+              name: "TP. Hồ Chí Minh",
+              imageUrl: "https://images.unsplash.com/photo-1583417319070-4a69db38a482"
+            },
+            {
+              code: 4,
+              name: "Nha Trang",
+              imageUrl: "https://imgcy.trivago.com/c_fill,d_dummy.jpeg,e_sharpen:60,f_auto,h_258,q_auto,w_258/categoryimages/68/09/68091_v72.jpeg"
+            },
+            {
+              code: 5,
+              name: "Đà Lạt",
+              imageUrl: "https://images.unsplash.com/photo-1555921015-5532091f6026"
+            }
+          ]
+        },
+        errors: []
+      };
 
-      // const availableCitiesResponse = await get(
-      //   'api/availableCities'
-      // );
-      // if (availableCitiesResponse) {
-      //   setAvailableCities(availableCitiesResponse.data.elements);
-      // }
+      const hotelsResultsResponse = await get('api/hotels');
 
-      // if (popularDestinationsResponse) {
-      //   setPopularDestinationsData({
-      //     isLoading: false,
-      //     data: popularDestinationsResponse.data.elements,
-      //     errors: popularDestinationsResponse.errors,
-      //   });
-      // }
+      // Mock dữ liệu availableCities
+      const mockAvailableCitiesResponse = {
+        data: {
+          elements: ["Hà Nội", "Đà Nẵng", "TP. Hồ Chí Minh", "Nha Trang", "Đà Lạt", "Phú Quốc", "Huế", "Hội An"]
+        }
+      };
+
+      // Sử dụng mock data cho availableCities
+      setAvailableCities(mockAvailableCitiesResponse.data.elements);
+
+      // Sử dụng mock data cho popularDestinations
+      setPopularDestinationsData({
+        isLoading: false,
+        data: mockPopularDestinationsResponse.data.elements,
+        errors: mockPopularDestinationsResponse.errors,
+      });
+      
       console.log(hotelsResultsResponse);
       if (hotelsResultsResponse) {
         setHotelsResults({

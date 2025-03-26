@@ -11,7 +11,8 @@ import PaginationController from '../../components/ux/PaginationController';
 import { SORTING_FILTER_LABELS } from '../../utils/constants';
 import _debounce from 'lodash/debounce';
 import Select from 'react-select';
-
+import HotelViewCard from '../../components/hotel-view-card/HotelViewCard';
+import HotelViewCardSkeleton from '../../components/hotel-view-card-skeleton/HotelViewCardSkeleton';
 const HotelsSearch = () => {
     // 1. Khai báo states
     const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
@@ -100,59 +101,119 @@ const HotelsSearch = () => {
     }, [searchParams, dateRange, setSearchParams]);
 
     // 2. Khai báo fetchHotels trước
-    const fetchHotels = async (filters) => {
-        setHotelsResults(prev => ({ ...prev, isLoading: true }));
-
+    const fetchHotels = async (filters = {}) => {
         try {
-            const queryParams = new URLSearchParams();
+            setHotelsResults({
+                isLoading: true,
+                data: [],
+                errors: []
+            });
 
-            // Xử lý các filters nếu có
-            if (filters) {
-                Object.entries(filters).forEach(([key, value]) => {
-                    // Chỉ thêm các filter có giá trị
-                    if (value !== undefined && value !== null && value !== '') {
-                        if (key === 'starRatings') {
-                            queryParams.set(key, Array.isArray(value) ? value.join(',') : value);
-                        } else if (Array.isArray(value)) {
-                            queryParams.set(key, value.join(','));
-                        } else {
-                            queryParams.set(key, value);
-                        }
-                    }
-                });
+            let url;
+            let params = new URLSearchParams();
+            
+            // Kiểm tra filters có phức tạp không để quyết định dùng endpoint nào
+            const hasComplexFilters = filters.minPrice || filters.maxPrice || 
+                                     filters.starRatings || filters.sortBy;
+            
+            if (hasComplexFilters) {
+                // Sử dụng endpoint /filter cho các filter phức tạp
+                url = 'api/hotels/filter';
+                
+                // Thêm city
+                if (filters.city) {
+                    params.append('city', filters.city);
+                }
+                
+                // Thêm price range
+                if (filters.minPrice) {
+                    params.append('minPrice', filters.minPrice);
+                }
+                if (filters.maxPrice) {
+                    params.append('maxPrice', filters.maxPrice);
+                }
+                
+                // Thêm star rating (API chỉ nhận một giá trị starRating)
+                if (filters.starRatings && filters.starRatings.length > 0) {
+                    // Nếu có nhiều giá trị, chọn giá trị cao nhất
+                    const highestRating = Math.max(...filters.starRatings);
+                    params.append('starRating', highestRating);
+                }
+                
+                // Thêm numOfGuests
+                if (filters.numGuest) {
+                    params.append('numOfGuests', filters.numGuest);
+                }
+                
+                // Thêm sorting
+                if (filters.sortBy) {
+                    params.append('sortBy', filters.sortBy);
+                    params.append('sortDirection', filters.sortDirection || 'asc');
+                }
+                
+                // Phân trang
+                params.append('page', filters.page || 0);
+                params.append('size', filters.size || 10);
+                
+            } else if (filters.city || filters.numGuest) {
+                // Sử dụng endpoint /search cho tìm kiếm đơn giản
+                url = 'api/hotels/search';
+                
+                if (filters.city) {
+                    params.append('city', filters.city);
+                }
+                
+                if (filters.numGuest) {
+                    params.append('numOfGuests', filters.numGuest);
+                }
+            } else {
+                // Không có filter nào, dùng endpoint mặc định
+                url = 'api/hotels';
             }
-
-            // Thêm params cho phân trang
-            queryParams.set('page', String(currentResultsPage - 1));
-
-            // Thêm params cho sort
-            if (sortByFilterValue.value !== 'default') {
-                queryParams.set('sortBy', sortByFilterValue.value.startsWith('price') ? 'price' : 'rating');
-                queryParams.set('sortDirection', sortByFilterValue.value.endsWith('HighToLow') ? 'desc' : 'asc');
+            
+            // Thêm query params nếu có
+            if (params.toString()) {
+                url += `?${params.toString()}`;
             }
-
-            const url = `api/hotels?${queryParams.toString()}`;
-            console.log('Fetching hotels with URL:', url);
-
-            const hotelsResultsResponse = await get(url);
-
-            if (hotelsResultsResponse) {
+            
+            console.log("Calling API:", url);
+            
+            const response = await get(url);
+            console.log("API response:", response);
+            
+            if (response) {
+                let hotelData = [];
+                let pagination = null;
+                
+                // Xử lý response tùy thuộc vào API endpoint
+                if (url.includes('/filter')) {
+                    // API filter trả về cấu trúc phân trang
+                    hotelData = response.hotels || [];
+                    pagination = {
+                        totalElements: response.totalElements || 0,
+                        totalPages: response.totalPages || 0,
+                        currentPage: response.currentPage || 0
+                    };
+                } else {
+                    // API khác trả về array trực tiếp
+                    hotelData = Array.isArray(response) ? response : [];
+                }
+                
                 setHotelsResults({
                     isLoading: false,
-                    data: hotelsResultsResponse,
-                    errors: hotelsResultsResponse.errors || [],
-                    metadata: hotelsResultsResponse.metadata,
-                    pagination: hotelsResultsResponse.paging,
+                    data: hotelData,
+                    pagination: pagination,
+                    errors: []
                 });
-            } else {
-                throw new Error("API response is empty");
+                
+                console.log("Processed hotel data:", hotelData);
             }
         } catch (error) {
             console.error("Error fetching hotels:", error);
             setHotelsResults({
                 isLoading: false,
                 data: [],
-                errors: [error.message || "Failed to fetch hotels"]
+                errors: ["Failed to fetch hotels"]
             });
         }
     };
@@ -354,37 +415,34 @@ const HotelsSearch = () => {
     };
 
     const fetchHotelsFromParams = () => {
-        const params = Object.fromEntries(searchParams.entries());
         const filters = {};
-
-        if (params.city) {
-            filters.city = params.city;
+        
+        // Lấy tất cả params từ URL
+        for (const [key, value] of searchParams.entries()) {
+            if (key === 'city') {
+                filters.city = value;
+            } else if (key === 'numGuest') {
+                filters.numGuest = parseInt(value);
+            } else if (key === 'starRatings') {
+                filters.starRatings = value.split(',').map(Number);
+            } else if (key === 'priceRange') {
+                const [min, max] = value.split(',');
+                filters.minPrice = parseFloat(min);
+                filters.maxPrice = parseFloat(max);
+            } else if (key === 'sortBy') {
+                filters.sortBy = value;
+            } else if (key === 'sortDirection') {
+                filters.sortDirection = value;
+            }
         }
-
-        if (params.numOfGuests) {
-            filters.numOfGuests = parseInt(params.numOfGuests, 10);
-        }
-
-        if (params.starRatings) {
-            filters.starRatings = params.starRatings.split(',').map(Number);
-        }
-
-        if (params.priceRange) {
-            const priceRange = params.priceRange.split(',');
-            filters.minPrice = parseFloat(priceRange[0]);
-            filters.maxPrice = parseFloat(priceRange[1]);
-        }
-
-        Object.keys(params).forEach(key => {
-            if (['city', 'numOfGuests', 'starRatings', 'priceRange', 'page', 'sortBy', 'sortDirection'].includes(key)) return;
-            filters[key] = params[key];
-        });
-
+        
+        // Thêm ngày check-in/check-out nếu có
         if (dateRange[0]?.startDate && dateRange[0]?.endDate) {
             filters.checkInDate = formatDate(dateRange[0].startDate);
             filters.checkOutDate = formatDate(dateRange[0].endDate);
         }
-
+        
+        // Gọi API với tất cả filters
         fetchHotels(filters);
     };
 
@@ -472,11 +530,19 @@ const HotelsSearch = () => {
 
         getCities();
 
-        // Gọi API ngay cả khi không có searchParams
-        if (searchParams.toString()) {
+        // Kiểm tra params từ URL
+        const cityParam = searchParams.get('city');
+        if (cityParam) {
+            // Cập nhật input location
+            setLocationInputValue(cityParam);
+            
+            // Sử dụng endpoint search vì chỉ có city
+            fetchHotels({ city: cityParam });
+        } else if (searchParams.toString()) {
+            // Nếu có các params khác, xử lý toàn bộ params
             fetchHotelsFromParams();
         } else {
-            // Nếu không có searchParams, vẫn gọi API để lấy tất cả khách sạn
+            // Không có params, lấy tất cả khách sạn
             fetchHotels({});
         }
     }, []);
@@ -501,6 +567,9 @@ const HotelsSearch = () => {
             />
         );
     };
+
+    // Kiểm tra dữ liệu trước khi render
+    console.log("Current hotel results:", hotelsResults);
 
     return (
         <div className="hotels">

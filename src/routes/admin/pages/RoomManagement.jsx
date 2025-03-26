@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {post,get,uploadFile} from "../../../utils/request"
+import {post,get,uploadFile,put,del} from "../../../utils/request"
 
 import {
   Card,
@@ -39,6 +39,7 @@ const RoomManagement = () => {
     const fetchHotels = async () => {
       try {
         const response = await get('api/hotels');
+        console.log(response);
         setHotels(response);
       } catch (error) {
         console.error('Error fetching hotels:', error);
@@ -58,20 +59,29 @@ const RoomManagement = () => {
     setIsDeleteModalVisible(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (hotelToDelete) {
-      const updatedHotels = hotels.filter((hotel) => hotel.id !== hotelToDelete);
-      setHotels(updatedHotels);
-      message.success(`Đã xóa khách sạn với ID: ${hotelToDelete}`);
-      const newTotalPages = Math.ceil(updatedHotels.length / pageSize);
-      if (currentPage > newTotalPages && newTotalPages > 0) {
-        setCurrentPage(newTotalPages);
-      } else if (updatedHotels.length === 0) {
-        setCurrentPage(1);
+  const handleConfirmDelete = async () => {
+    try {
+      if (hotelToDelete) {
+        await del(`api/hotels/${hotelToDelete}`);
+        
+        const updatedHotels = hotels.filter((hotel) => hotel.hotelId !== hotelToDelete);
+        setHotels(updatedHotels);
+        
+        message.success(`Đã xóa khách sạn thành công!`);
+        
+        const newTotalPages = Math.ceil(updatedHotels.length / pageSize);
+        if (currentPage > newTotalPages && newTotalPages > 0) {
+          setCurrentPage(newTotalPages);
+        } else if (updatedHotels.length === 0) {
+          setCurrentPage(1);
+        }
       }
+    } catch (error) {
+      message.error(error.message);
+    } finally {
+      setIsDeleteModalVisible(false);
+      setHotelToDelete(null);
     }
-    setIsDeleteModalVisible(false);
-    setHotelToDelete(null);
   };
 
   const handleCancelDelete = () => {
@@ -80,25 +90,23 @@ const RoomManagement = () => {
     message.info("Hủy xóa khách sạn!");
   };
 
-  const handleCreateRoom = (newRoom) => {
-    const currentPageHotels = hotels.slice(
-      (currentPage - 1) * pageSize,
-      currentPage * pageSize
-    );
-
-    if (currentPageHotels.length < pageSize) {
-      const updatedHotels = [...hotels];
-      const insertIndex =
-        (currentPage - 1) * pageSize + currentPageHotels.length;
-      updatedHotels.splice(insertIndex, 0, newRoom);
+  const handleCreateRoom = async (newRoom) => {
+    try {
+      const result = await createHotel(newRoom);
+      
+      const updatedHotels = [...hotels, result];
       setHotels(updatedHotels);
-    } else {
-      const updatedHotels = [...hotels, newRoom];
-      setHotels(updatedHotels);
+      
+      message.success("Khách sạn đã được thêm thành công!");
+      
+      // Chuyển đến trang cuối nếu trang hiện tại đã đầy
       const newTotalPages = Math.ceil(updatedHotels.length / pageSize);
-      setCurrentPage(newTotalPages);
+      if (hotels.length % pageSize === 0) {
+        setCurrentPage(newTotalPages);
+      }
+    } catch (error) {
+      message.error(error.message);
     }
-    message.success("Phòng đã được thêm vào danh sách!");
   };
 
   const showCreateRoomModal = () => {
@@ -109,11 +117,11 @@ const RoomManagement = () => {
     setEditingHotel(hotel);
     setImages(hotel.images || []);
     form.setFieldsValue({
-      name: hotel.name,
-      type: hotel.type,
-      description: hotel.description,
-      beds: parseInt(hotel.beds.replace(" giường", "")) || 1,
-      price: parseInt(hotel.price.replace(" VND", "").replace(/\./g, "")) || 0,
+      title: hotel.title,
+      subtitle: hotel.subtitle,
+      benefits: hotel.benefits.join(', '),
+      price: hotel.price,
+      city: hotel.city
     });
     setIsModalVisible(true);
   };
@@ -121,20 +129,22 @@ const RoomManagement = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      
       const updatedHotel = {
-        ...editingHotel,
+        hotelId: editingHotel.hotelId,
         images: images,
-        name: values.name,
-        type: values.type,
-        description: values.description,
-        beds: values.beds,
-        price: values.price
+        title: values.title,
+        subtitle: values.subtitle,
+        benefits: values.benefits.split(',').map(b => b.trim()),
+        price: parseFloat(values.price),
+        city: values.city,
+        ratings: editingHotel.ratings
       };
 
-      const result = await post(`/api/hotels/${editingHotel.id}`, updatedHotel);
+      const result = await put(`api/hotels/${editingHotel.hotelId}`, updatedHotel);
       
       setHotels(hotels.map((hotel) => 
-        hotel.id === editingHotel.id ? updatedHotel : hotel
+        hotel.hotelId === editingHotel.hotelId ? result : hotel
       ));
       
       message.success("Thông tin khách sạn đã được cập nhật!");
@@ -208,12 +218,7 @@ const RoomManagement = () => {
         formData.append('files', file);
       });
 
-      const response = await post('/api/upload/images', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
+      const response = await uploadFile('api/upload/images', formData);
       return response.imageUrls;
     } catch (error) {
       message.error(error.message || 'Tải ảnh lên thất bại!');
@@ -225,6 +230,30 @@ const RoomManagement = () => {
     const successFiles = fileList.filter(file => file.status === 'done');
     const imageUrls = successFiles.map(file => file.response.url);
     setImages(imageUrls);
+  };
+
+  const deleteHotel = async (hotelId) => {
+    try {
+      const response = await del(`api/hotels/${hotelId}`);
+      if (!response) {
+        throw new Error('Xóa khách sạn thất bại');
+      }
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Xóa khách sạn thất bại');
+    }
+  };
+
+  const createHotel = async (hotelData) => {
+    try {
+      const response = await post('api/hotels', hotelData);
+      if (!response) {
+        throw new Error('Tạo khách sạn thất bại');
+      }
+      return response;
+    } catch (error) {
+      throw new Error(error.message || 'Tạo khách sạn thất bại');
+    }
   };
 
   return (
@@ -246,7 +275,7 @@ const RoomManagement = () => {
       <Row gutter={[16, 8]} className="flex-grow">
         {paginatedData.length > 0 ? (
           paginatedData.map((hotel) => (
-            <Col xs={24} key={hotel.id} className="mb-2">
+            <Col xs={24} key={hotel.hotelId} className="mb-2">
               <Card
                 className="shadow-sm rounded-lg hover:shadow-md transition-all duration-300"
                 bodyStyle={{
@@ -257,7 +286,7 @@ const RoomManagement = () => {
               >
                 <div className="w-[180px] h-[120px] mr-3 overflow-hidden rounded-lg">
                   <img
-                    alt={hotel.name}
+                    alt={hotel.title}
                     src={hotel.images?.[0] || "https://via.placeholder.com/180x120"}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -267,12 +296,9 @@ const RoomManagement = () => {
                 </div>
 
                 <div className="flex-1 mx-3">
-                  <Title level={4} className="m-0 mb-1">
-                    {hotel.name}
+                  <Title level={4} className="m-0">
+                    {hotel.title}
                   </Title>
-                  <Text type="secondary" className="block mb-1">{hotel.type}</Text>
-                  <Text className="block mb-1">{hotel.description}</Text>
-                  <Text>{hotel.beds} giường</Text>
                 </div>
 
                 <div className="flex flex-col items-end">
@@ -286,7 +312,7 @@ const RoomManagement = () => {
                     <Button
                       type="primary"
                       danger
-                      onClick={() => showDeleteConfirm(hotel.id)}
+                      onClick={() => showDeleteConfirm(hotel.hotelId)}
                       className="w-24"
                     >
                       Xóa
@@ -345,18 +371,13 @@ const RoomManagement = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item label="Hình ảnh khách sạn">
-            <div className="flex items-center">
+            <div className="flex items-center flex-wrap gap-2">
               {images.map((image, index) => (
                 <img
                   key={index}
                   src={image}
                   alt={`Hotel Preview ${index + 1}`}
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    objectFit: "cover",
-                    marginRight: "16px",
-                  }}
+                  className="w-24 h-24 object-cover rounded"
                 />
               ))}
               <Upload
@@ -371,54 +392,54 @@ const RoomManagement = () => {
 
           <Form.Item
             label="Tên khách sạn"
-            name="name"
+            name="title"
             rules={[{ required: true, message: "Vui lòng nhập tên khách sạn!" }]}
           >
             <Input placeholder="Tên khách sạn" />
           </Form.Item>
 
           <Form.Item
-            label="Loại khách sạn"
-            name="type"
-            rules={[{ required: true, message: "Vui lòng chọn loại khách sạn!" }]}
+            label="Mô tả ngắn"
+            name="subtitle"
+            rules={[{ required: true, message: "Vui lòng nhập mô tả ngắn!" }]}
           >
-            <Select placeholder="Chọn loại khách sạn">
-              <Option value="Phòng Thường">Phòng Thường</Option>
-              <Option value="Phòng Cao Cấp">Phòng Cao Cấp</Option>
-              <Option value="Suite">Suite</Option>
-            </Select>
+            <Input.TextArea rows={2} placeholder="Mô tả ngắn về khách sạn" />
           </Form.Item>
 
           <Form.Item
-            label="Mô tả khách sạn"
-            name="description"
-            rules={[{ required: true, message: "Vui lòng nhập mô tả khách sạn!" }]}
+            label="Tiện ích"
+            name="benefits"
+            rules={[{ required: true, message: "Vui lòng nhập các tiện ích!" }]}
+            tooltip="Nhập các tiện ích, phân cách bằng dấu phẩy"
           >
-            <TextArea rows={3} placeholder="Mô tả tiện ích" />
+            <Input.TextArea 
+              rows={2} 
+              placeholder="Ví dụ: wifi, spa, công viên" 
+            />
           </Form.Item>
 
           <Form.Item
-            label="Số giường"
-            name="beds"
-            rules={[
-              { required: true, message: "Vui lòng nhập số giường!" },
-              { type: "number", min: 1, message: "Số phải lớn hơn 0!" },
-            ]}
-            getValueFromEvent={(e) => parseInt(e.target.value) || 1}
-          >
-            <Input type="number" placeholder="Số giường" min={1} />
-          </Form.Item>
-
-          <Form.Item
-            label="Giá khách sạn (VND)"
+            label="Giá phòng (VND)"
             name="price"
             rules={[
-              { required: true, message: "Vui lòng nhập giá khách sạn!" },
-              { type: "number", min: 0, message: "Giá khách sạn không được âm!" },
+              { required: true, message: "Vui lòng nhập giá phòng!" },
+              { type: "number", min: 0, message: "Giá phòng không được âm!" }
             ]}
-            getValueFromEvent={(e) => parseInt(e.target.value) || 0}
           >
-            <Input type="number" placeholder="Giá khách sạn" min={0} />
+            <Input 
+              type="number" 
+              placeholder="Giá phòng"
+              min={0}
+              step={100000}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Thành phố"
+            name="city"
+            rules={[{ required: true, message: "Vui lòng nhập thành phố!" }]}
+          >
+            <Input placeholder="Nhập tên thành phố" />
           </Form.Item>
         </Form>
       </Modal>

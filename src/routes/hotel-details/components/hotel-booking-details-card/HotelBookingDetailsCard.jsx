@@ -74,6 +74,9 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     { value: 'Suite', label: 'Suite' },
   ];
 
+  // Thêm state cho guestFullName
+  const [guestFullName, setGuestFullName] = useState('');
+
   // Handlers for select changes
   const handleRoomTypeChange = (selectedOption) => {
     setSelectedRoom(selectedOption);
@@ -106,7 +109,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
     setDateRange([ranges.selection]);
     const days =
       startDate && endDate
-        ? differenceInCalendarDays(endDate, startDate) + 1
+        ? differenceInCalendarDays(endDate, startDate)
         : 1;
     console.log(`Booking period: ${days} days`);
     
@@ -148,6 +151,28 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
   };
 
   /**
+   * Thêm useEffect để lấy thông tin user từ localStorage
+   */
+  useEffect(() => {
+    try {
+      const userDataString = localStorage.getItem('user');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        const firstName = userData.firstName || '';
+        const lastName = userData.lastName || '';
+        
+        // Kết hợp firstName và lastName
+        if (firstName || lastName) {
+          const fullName = [firstName, lastName].filter(Boolean).join(' ');
+          setGuestFullName(fullName);
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi khi đọc dữ liệu từ localStorage:', error);
+    }
+  }, []);
+
+  /**
    * Xử lý xác nhận đặt phòng và tạo booking
    */
   const onBookingConfirm = async () => {
@@ -161,68 +186,52 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       return;
     }
 
+    if (!guestFullName) {
+      setErrorMessage('Không tìm thấy thông tin người đặt phòng.');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       
-      // Format dữ liệu để gửi lên API
-      const checkIn = format(dateRange[0].startDate, 'dd-MM-yyyy');
-      const checkOut = format(dateRange[0].endDate, 'dd-MM-yyyy');
-      
-      const totalPriceValue = total.replace(/[^0-9.]/g, ''); // Chỉ lấy số từ chuỗi total
-      
+      // Format dữ liệu theo BookingRequest
       const bookingData = {
+        checkInDate: format(dateRange[0].startDate, 'yyyy-MM-dd'),
+        checkOutDate: format(dateRange[0].endDate, 'yyyy-MM-dd'),
+        guestFullName: guestFullName,
+        numberOfGuests: selectedGuests.value,
+        numberOfRooms: selectedRooms.value,
+        roomType: selectedRoom.label,
         hotelId: parseInt(hotelCode),
-        checkInDate: checkIn,
-        checkOutDate: checkOut,
-        numOfGuests: selectedGuests.value,
-        numOfRooms: selectedRooms.value,
-        roomType: selectedRoom.value,
-        totalPrice: parseFloat(totalPriceValue),
-        taxAmount: parseFloat(taxes.replace(/[^0-9.]/g, '')),
-        totalNights: bookingPeriodDays,
-        pricePerNight: hotelDetails.price,
-        hotelName: hotelDetails.title,
-        city: hotelDetails.city || ''
+        status: "PENDING" // Thêm trạng thái PENDING
       };
       
-      console.log("Sending booking data:", bookingData);
+      console.log("Booking data:", bookingData);
       
-      // Gọi API để tạo booking
+      // Gọi API để tạo booking với trạng thái PENDING
       const response = await post('api/bookings/create', bookingData);
-      console.log("Booking response:", response);
       
       if (response && response.error) {
         throw new Error(response.error || 'Đã xảy ra lỗi khi đặt phòng');
       }
       
-      // Chuẩn bị dữ liệu để chuyển đến trang checkout
-      const queryParams = {
-        bookingId: response?.id || response?.bookingId || Date.now(),
-        hotelCode,
-        checkIn,
-        checkOut,
-        guests: selectedGuests.value,
-        rooms: selectedRooms.value,
-        hotelName: hotelDetails.title?.replaceAll(' ', '-') || 'hotel',
-      };
-
-      // Chuyển hướng đến trang checkout
-      const url = `/checkout?${queryString.stringify(queryParams)}`;
-      navigate(url, {
+      // Chuyển hướng đến trang checkout với đầy đủ thông tin cần thiết
+      navigate(`/checkout?hotelCode=${hotelCode}&checkIn=${format(dateRange[0].startDate, 'yyyy-MM-dd')}&checkOut=${format(dateRange[0].endDate, 'yyyy-MM-dd')}&hotelName=${encodeURIComponent(hotelDetails.title || 'Hotel')}`, {
         state: {
-          bookingId: response?.id || response?.bookingId || Date.now(),
-          total,
-          checkInDate: checkIn,
-          checkOutDate: checkOut,
-          checkInTime: '14:00',
-          checkOutTime: '12:00',
+          bookingId: response.id, // Sử dụng ID từ response API thay vì tạo tạm thời
           bookingDetails: bookingData,
-          hotelDetails: hotelDetails
-        },
+          hotelDetails: hotelDetails,
+          roomType: selectedRoom.label,
+          numberOfRooms: selectedRooms.value,
+          numberOfGuests: selectedGuests.value,
+          totalPrice: total,
+          tax: taxes,
+          confirmationCode: response.confirmationCode || null
+        }
       });
     } catch (error) {
-      console.error("Error during booking:", error);
-      setErrorMessage(error.message || 'Có lỗi xảy ra khi đặt phòng. Vui lòng thử lại sau.');
+      console.error("Error during booking preparation:", error);
+      setErrorMessage(error.message || 'Có lỗi xảy ra khi chuẩn bị đặt phòng.');
     } finally {
       setIsProcessing(false);
     }
