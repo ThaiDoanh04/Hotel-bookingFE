@@ -15,6 +15,20 @@ function Admin() {
   useEffect(() => {
     console.log("Admin component mounted");
     console.log("Current path:", location.pathname);
+
+    // Debug user data
+    const userData = localStorage.getItem('user');
+    console.log("User data from localStorage:", userData);
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        console.log("Parsed user:", parsedUser);
+        console.log("User role:", parsedUser.role);
+        console.log("Is admin?", parsedUser.role === 'ADMIN');
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
   }, [location]);
 
   const handleCollapse = (collapsed) => {

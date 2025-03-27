@@ -14,36 +14,18 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const checkAuthStatus = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const token = await AsyncStorage.getItem('authToken');
-        if (token) {
+        // Đọc dữ liệu user từ localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
           try {
-            const decodedToken = jwtDecode(token);
-            const currentTime = Date.now() / 1000;            
-            if (decodedToken.exp && decodedToken.exp < currentTime) {
-              console.log('Token expired');
-              await AsyncStorage.removeItem('authToken');
-              setIsAuthenticated(false);
-              setUserDetails(null);
-            } else {
-              // Use authService instead of networkAdapter
-              const response = await authService.getCurrentUser();              
-              if (response) {
-                setIsAuthenticated(true);
-                console.log(response);
-                setUserDetails(response);
-
-                console.log(userDetails);
-              } else {
-                await AsyncStorage.removeItem('authToken');
-                setIsAuthenticated(false);
-                setUserDetails(null);
-              }
-            }
-          } catch (decodeError) {
-            console.error('Invalid token:', decodeError);
-            await AsyncStorage.removeItem('authToken');
+            const parsedUserData = JSON.parse(userData);
+            // Cập nhật userDetails từ localStorage
+            setUserDetails(parsedUserData);
+            setIsAuthenticated(true);
+          } catch (error) {
+            console.error('Error parsing user data:', error);
             setIsAuthenticated(false);
             setUserDetails(null);
           }
@@ -53,8 +35,6 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error('Auth check failed:', err);
-        setError(err.message || 'Authentication check failed');
-        await AsyncStorage.removeItem('authToken');
         setIsAuthenticated(false);
         setUserDetails(null);
       } finally {
@@ -70,8 +50,20 @@ export const AuthProvider = ({ children }) => {
 
   };
 
+  // Kiểm tra xem người dùng có phải admin không
+  const isAdmin = () => {
+    return userDetails && (userDetails.role === 'ADMIN' || userDetails.role === 1);
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userDetails, triggerAuthCheck, loading, error }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      userDetails, 
+      triggerAuthCheck, 
+      loading, 
+      error,
+      isAdmin
+    }}>
       {children}
     </AuthContext.Provider>
   );

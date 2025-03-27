@@ -1,4 +1,6 @@
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import AdminProtectedRoute from './components/protected-routes/AdminProtectedRoute';
 import Home from './routes/home/Home';
 import BaseLayout from './routes/layouts/BaseLayout';
 import Login from './routes/login/Login';
@@ -13,6 +15,9 @@ import OTPVerification from './routes/forgot-password/OTPVerification';
 import ResetPassword from './routes/forgot-password/ResetPassword';
 import Admin from './routes/admin/Admin';
 import Checkout from './routes/checkout/Checkout';
+import BookingSuccess from './routes/booking-success/BookingSuccess';
+import BookingFailed from './routes/booking-failed/BookingFailed';
+
 function App() {
   return (
     <Routes>
@@ -28,8 +33,17 @@ function App() {
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="user-profile" element={<UserProfile />} />
         <Route path="checkout" element={<Checkout />} />
+        <Route path="booking-success" element={<BookingSuccess />} />
+        <Route path="booking-failed" element={<BookingFailed />} />
       </Route>
-      <Route path="/admin/*" element={<Admin />} />
+      <Route 
+        path="/admin/*" 
+        element={
+          <AdminProtectedRoute>
+            <Admin />
+          </AdminProtectedRoute>
+        } 
+      />
     </Routes>
   );
 }

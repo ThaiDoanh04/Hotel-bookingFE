@@ -5,6 +5,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import Toast from '../../components/ux/toast/Toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { message } from 'antd';
 
 /**
  * Login Component
@@ -45,8 +46,17 @@ const Login = () => {
       if (response.error) {
         setErrorMessage(response.error);
       } else {
+        // Lấy thông tin user từ response (giả sử response chứa thông tin user)
+        // Nếu không có thông tin user trong response, bạn có thể cần fetch thêm
+        
+        // Trigger auth check (điều này sẽ load userDetails từ localStorage)
         triggerAuthCheck();
-        navigate('/user-profile');
+        
+        // Thay đổi ở đây: Luôn chuyển hướng đến trang chủ sau khi đăng nhập thành công
+        navigate('/'); // Chuyển hướng đến trang chủ
+        
+        // Hiển thị thông báo đăng nhập thành công
+        message.success('Đăng nhập thành công!');
       }
     } catch (error) {
       setErrorMessage('Đăng nhập thất bại. Vui lòng thử lại.');

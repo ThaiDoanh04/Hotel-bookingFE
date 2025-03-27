@@ -218,7 +218,7 @@ const HotelBookingDetailsCard = ({ hotelCode }) => {
       // Chuyển hướng đến trang checkout với đầy đủ thông tin cần thiết
       navigate(`/checkout?hotelCode=${hotelCode}&checkIn=${format(dateRange[0].startDate, 'yyyy-MM-dd')}&checkOut=${format(dateRange[0].endDate, 'yyyy-MM-dd')}&hotelName=${encodeURIComponent(hotelDetails.title || 'Hotel')}`, {
         state: {
-          bookingId: response.id, // Sử dụng ID từ response API thay vì tạo tạm thời
+          bookingId: response.bookingId, // Sử dụng ID từ response API thay vì tạo tạm thời
           bookingDetails: bookingData,
           hotelDetails: hotelDetails,
           roomType: selectedRoom.label,

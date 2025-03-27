@@ -1,4 +1,4 @@
-import logo from '/Users/doandoanhthai/Java/Hotel-bookingFE/Hotel-booking/src/assets/logo/logo.jpg';
+import logo from '../../assets/logo/logo.jpg';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import HamburgerMenu from '../hamburger-menu/HamburgerMenu';

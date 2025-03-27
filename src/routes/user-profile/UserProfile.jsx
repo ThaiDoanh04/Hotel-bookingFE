@@ -4,12 +4,10 @@ import TabPanel from '../../components/ux/tab-panel/TabPanel';
 import {
   faAddressCard,
   faHotel,
-  faCreditCard,
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../../contexts/AuthContext';
 import { get } from '../../utils/request';
 import { useContext } from 'react';
-import PaymentMethodsPanel from './components/PaymentsMethodsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
@@ -20,7 +18,7 @@ import ProfileDetailsPanel from './components/ProfileDetailsPanel';
 
 /**
  * UserProfile
- * Renders the user profile page with tabs for personal details, bookings, and payment methods.
+ * Renders the user profile page with tabs for personal details and bookings.
  * @returns {JSX.Element} - The UserProfile component
  * */
 const UserProfile = () => {
@@ -39,13 +37,6 @@ const UserProfile = () => {
     errors: [],
   });
 
-  // Fetch user payment methods data
-  const [userPaymentMethodsData, setUserPaymentMethodsData] = useState({
-    isLoading: true,
-    data: [],
-    errors: [],
-  });
-
   useOutsideClickHandler(wrapperRef, (event) => {
     if (!buttonRef.current.contains(event.target)) {
       setIsTabsVisible(false);
@@ -56,41 +47,49 @@ const UserProfile = () => {
     setIsTabsVisible(!isTabsVisible);
   };
 
-  // effect to set initial state of user details
-  // useEffect(() => {
-  //   console.log(userDetails);
-  //   if (!userDetails) {
-  //     console.log('vao');
-  //     navigate('/login');
-  //   }
-  // }, [navigate, userDetails]);
-
   // effect to set initial state of user bookings data
   useEffect(() => {
-    const getInitialData = async () => {
-      const userBookingsDataResponse = await get(
-        '/api/users/bookings'
-      );
-      const userPaymentMethodsResponse = await get(
-        'api/users/payment-methods'
-      );
-      if (userBookingsDataResponse && userBookingsDataResponse.data) {
+    const fetchUserBookings = async () => {
+      try {
+        setUserBookingsData({
+          isLoading: true,
+          data: [],
+          errors: []
+        });
+        
+        // Lấy userId từ userDetails
+        const userId = userDetails?.userId;
+        
+        if (!userId) {
+          throw new Error('User ID không có sẵn');
+        }
+        
+        // Gọi API với userId cụ thể
+        const userBookingsResponse = await get(`api/bookings/user/${userId}`);
+        
+        if (userBookingsResponse) {
+          setUserBookingsData({
+            isLoading: false,
+            data: Array.isArray(userBookingsResponse) ? userBookingsResponse : [],
+            errors: []
+          });
+        } else {
+          throw new Error('Không nhận được phản hồi từ API');
+        }
+      } catch (error) {
+        console.error('Error fetching user bookings:', error);
         setUserBookingsData({
           isLoading: false,
-          data: userBookingsDataResponse.data.elements,
-          errors: userBookingsDataResponse.errors,
-        });
-      }
-      if (userPaymentMethodsResponse && userPaymentMethodsResponse.data) {
-        setUserPaymentMethodsData({
-          isLoading: false,
-          data: userPaymentMethodsResponse.data.elements,
-          errors: userPaymentMethodsResponse.errors,
+          data: [],
+          errors: [error.message || 'Không thể tải dữ liệu đặt phòng']
         });
       }
     };
-    getInitialData();
-  }, []);
+    
+    if (userDetails) {
+      fetchUserBookings();
+    }
+  }, [userDetails]);
 
   return (
     <>
@@ -113,12 +112,6 @@ const UserProfile = () => {
           </TabPanel>
           <TabPanel label="Bookings" icon={faHotel}>
             <BookingPanel bookings={userBookingsData.data} />
-          </TabPanel>
-          <TabPanel label="Payment details" icon={faCreditCard}>
-            <PaymentMethodsPanel
-              userPaymentMethodsData={userPaymentMethodsData}
-              setUserPaymentMethodsData={setUserPaymentMethodsData}
-            />
           </TabPanel>
         </Tabs>
       </div>

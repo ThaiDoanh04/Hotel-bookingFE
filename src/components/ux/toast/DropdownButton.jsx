@@ -9,7 +9,7 @@ const DropdownButton = (props) => {
   const buttonRef = useRef();
   const [isDropdownContainerVisible, setIsDropdownContainerVisible] =
     useState(false);
-  const { user } = useContext(AuthContext);
+  const { userDetails } = useContext(AuthContext);
 
   const onDropdownClickTrigger = () => {
     triggerType === 'click' &&
@@ -30,10 +30,10 @@ const DropdownButton = (props) => {
   const getDropdownOptions = () => {
     let options = props.options || [];
     
-    if (user?.role === 'admin') {
+    if (userDetails && (userDetails.role === 'ADMIN' || userDetails.role === 1)) {
       options = [
         {
-          name: 'Trang quản trị',
+          name: 'Admin',
           onClick: () => window.location.href = '/admin'
         },
         ...options

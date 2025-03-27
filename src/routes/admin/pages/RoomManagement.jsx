@@ -90,22 +90,13 @@ const RoomManagement = () => {
     message.info("Hủy xóa khách sạn!");
   };
 
-  const handleCreateRoom = async (newRoom) => {
+  const handleCreateHotel = async (newHotel) => {
     try {
-      const result = await createHotel(newRoom);
-      
-      const updatedHotels = [...hotels, result];
-      setHotels(updatedHotels);
-      
-      message.success("Khách sạn đã được thêm thành công!");
-      
-      // Chuyển đến trang cuối nếu trang hiện tại đã đầy
-      const newTotalPages = Math.ceil(updatedHotels.length / pageSize);
-      if (hotels.length % pageSize === 0) {
-        setCurrentPage(newTotalPages);
-      }
+      setHotels([...hotels, newHotel]);
+      message.success('Tạo khách sạn thành công!');
+      setIsCreateModalVisible(false);
     } catch (error) {
-      message.error(error.message);
+      message.error(error.message || 'Tạo khách sạn thất bại');
     }
   };
 
@@ -447,7 +438,7 @@ const RoomManagement = () => {
       <CreateRoom
         isModalVisible={isCreateModalVisible}
         setIsModalVisible={setIsCreateModalVisible}
-        onCreate={handleCreateRoom}
+        onCreate={handleCreateHotel}
       />
 
       <Modal

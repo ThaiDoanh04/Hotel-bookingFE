@@ -48,6 +48,12 @@ const Sidebar = ({ onCollapse }) => {
             icon: <HomeOutlined />,
             label: "Quản lý phòng",
             path: "/admin/room-management", // Đường dẫn tuyệt đối
+          },
+          {
+            key: "4",
+            icon: <HomeOutlined />,
+            label: "Về trang chủ",
+            path: "/", // Đường dẫn tới trang chủ
           }
         ];
         
