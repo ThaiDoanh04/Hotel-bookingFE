@@ -3,6 +3,8 @@ import DropdownButton from '../ux/toast/DropdownButton';
 import { authService } from '../../service/authService';
 import { useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHome, faHotel, faSignInAlt, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 
 /**
  * A component that renders the navigation items for the navbar for both mobile/desktop view.
@@ -15,8 +17,6 @@ const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { triggerAuthCheck } = useContext(AuthContext);
-
-
 
   /**
    * Handles the logout action by calling the logout API and updating the authentication state.
@@ -32,8 +32,16 @@ const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
   };
 
   const dropdownOptions = [
-    { name: 'Profile', onClick: () => navigate('/user-profile') },
-    { name: 'Logout', onClick: handleLogout },
+    { 
+      name: 'Hồ sơ của tôi', 
+      onClick: () => navigate('/user-profile'),
+      icon: <FontAwesomeIcon icon={faUserCircle} className="mr-2" />
+    },
+    { 
+      name: 'Đăng xuất', 
+      onClick: handleLogout,
+      className: 'text-red-500'
+    },
   ];
 
   /**
@@ -48,53 +56,45 @@ const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle }) => {
 
   return (
     <>
-      <li className="p-4 hover:bg-blue-900 md:hover:bg-brand">
+      <li className="p-4 hover:bg-blue-900 md:hover:bg-brand transition-colors duration-200">
         <Link
           to="/"
-          className={`uppercase font-medium text-slate-100 hover-underline-animation ${
-            isActive('/') && 'active-link'
+          className={`uppercase font-medium text-slate-100 hover-underline-animation flex items-center gap-2 ${
+            isActive('/') ? 'active-link' : ''
           }`}
           onClick={onHamburgerMenuToggle}
         >
-          Home
+          <FontAwesomeIcon icon={faHome} />
+          <span>Trang chủ</span>
         </Link>
       </li>
-      <li className="p-4 hover:bg-blue-900 md:hover:bg-brand">
+      <li className="p-4 hover:bg-blue-900 md:hover:bg-brand transition-colors duration-200">
         <Link
           to="/hotels"
-          className={`uppercase font-medium text-slate-100 hover-underline-animation ${
-            isActive('/hotels') && 'active-link'
+          className={`uppercase font-medium text-slate-100 hover-underline-animation flex items-center gap-2 ${
+            isActive('/hotels') ? 'active-link' : ''
           }`}
           onClick={onHamburgerMenuToggle}
         >
-          Hotels
-        </Link>
-      </li>
-      <li className="p-4 hover:bg-blue-900 md:hover:bg-brand">
-        <Link
-          to="/about-us"
-          className={`uppercase font-medium text-slate-100 hover-underline-animation ${
-            isActive('/about-us') && 'active-link'
-          }`}
-          onClick={onHamburgerMenuToggle}
-        >
-          About us
+          <FontAwesomeIcon icon={faHotel} />
+          <span>Khách sạn</span>
         </Link>
       </li>
       <li
-        className={`${!isAuthenticated && 'p-4 hover:bg-blue-900 md:hover:bg-brand'}`}
+        className={`${!isAuthenticated ? 'p-4 hover:bg-blue-900 md:hover:bg-brand transition-colors duration-200' : ''}`}
       >
         {isAuthenticated ? (
           <DropdownButton triggerType="click" options={dropdownOptions} />
         ) : (
           <Link
             to="/login"
-            className={`uppercase font-medium text-slate-100 hover-underline-animation ${
-              isActive('/login') && 'active-link'
+            className={`uppercase font-medium text-slate-100 hover-underline-animation flex items-center gap-2 ${
+              isActive('/login') ? 'active-link' : ''
             }`}
             onClick={onHamburgerMenuToggle}
           >
-            Login/Register
+            <FontAwesomeIcon icon={faSignInAlt} />
+            <span>Đăng nhập/Đăng ký</span>
           </Link>
         )}
       </li>

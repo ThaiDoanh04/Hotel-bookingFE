@@ -571,6 +571,85 @@ const HotelsSearch = () => {
     // Kiểm tra dữ liệu trước khi render
     console.log("Current hotel results:", hotelsResults);
 
+    // Thay đổi hàm xử lý khi người dùng chọn filter
+    const handleFilterChange = (filterId) => {
+        // Kiểm tra xem filter đã được chọn chưa
+        const isAlreadySelected = selectedFiltersState.includes(filterId);
+        
+        // Nếu filter đã được chọn, loại bỏ nó (hủy lọc)
+        // Nếu chưa được chọn, thêm nó vào danh sách filter đã chọn
+        const newSelectedFilters = isAlreadySelected
+            ? selectedFiltersState.filter(id => id !== filterId)
+            : [...selectedFiltersState, filterId];
+        
+        // Cập nhật state cho các filter đã chọn
+        setSelectedFiltersState(newSelectedFilters);
+        
+        // Áp dụng filter ngay lập tức
+        applyFilters(newSelectedFilters);
+    };
+
+    // Hàm áp dụng filter trực tiếp vào kết quả
+    const applyFilters = (selectedFilters) => {
+        // Bắt đầu với tất cả dữ liệu hotels
+        let filteredResults = [...hotelsResults.data];
+        
+        if (selectedFilters.length > 0) {
+            // Lọc kết quả dựa trên các filter đã chọn
+            filteredResults = filteredResults.filter(hotel => {
+                // Kiểm tra từng loại filter
+                return selectedFilters.every(filterId => {
+                    // Lấy thông tin filter từ filterId
+                    const filter = filtersData.data.find(f => f.id === filterId);
+                    
+                    if (!filter) return true;
+                    
+                    // Áp dụng filter tương ứng
+                    switch (filter.type) {
+                        case 'rating':
+                            return hotel.ratings >= filter.value;
+                        case 'price':
+                            return hotel.price <= filter.maxPrice && hotel.price >= filter.minPrice;
+                        case 'amenities':
+                            return hotel.amenities && hotel.amenities.includes(filter.value);
+                        // Thêm các loại filter khác nếu cần
+                        default:
+                            return true;
+                    }
+                });
+            });
+        }
+        
+        // Cập nhật kết quả đã lọc ngay lập tức
+        setHotelsResults({
+            ...hotelsResults,
+            filteredData: filteredResults
+        });
+    };
+
+    // Render phần checkbox filter
+    const renderFilterCheckbox = (filter) => {
+        const isSelected = selectedFiltersState.includes(filter.id);
+        
+        return (
+            <div 
+                key={filter.id} 
+                className="flex items-center mb-2 cursor-pointer"
+                onClick={() => handleFilterChange(filter.id)}
+            >
+                <div className={`w-5 h-5 border rounded mr-2 flex items-center justify-center 
+                    ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                    {isSelected && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    )}
+                </div>
+                <span className="text-gray-700">{filter.label}</span>
+            </div>
+        );
+    };
+
     return (
         <div className="hotels">
             <div className="bg-brand px-2 lg:h-[120px] h-[220px] flex items-center justify-center">
