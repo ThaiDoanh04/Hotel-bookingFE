@@ -26,13 +26,15 @@ const { Title, Text } = Typography;
 const statusMapping = {
   "PENDING": "Chờ thanh toán",
   "PAID": "Đã thanh toán",
-  "CANCELED": "Đã Hủy"
+  "FAILED": "Đã hủy",
+  "CANCELLED": "Đã hủy",  // Thêm mapping cho CANCELLED
+  "CANCELED": "Đã hủy"    // Thêm mapping cho CANCELED
 };
 
 const statusColors = {
   "Chờ thanh toán": "purple",
   "Đã thanh toán": "green",
-  "Đã Hủy": "red"
+  "Đã hủy": "red"
 };
 
 const BookingStatusTabs = () => {
@@ -40,26 +42,26 @@ const BookingStatusTabs = () => {
   const [bookings, setBookings] = useState({
     "Chờ thanh toán": [],
     "Đã thanh toán": [],
-    "Đã Hủy": [],
+    "Đã hủy": [],
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState({
     "Chờ thanh toán": 1,
     "Đã thanh toán": 1,
-    "Đã Hủy": 1,
+    "Đã hủy": 1,
   });
   
   const [sortOption, setSortOption] = useState({
     "Chờ thanh toán": "default",
     "Đã thanh toán": "default",
-    "Đã Hủy": "default",
+    "Đã hủy": "default",
   });
   
   const [filterOptions, setFilterOptions] = useState({
     "Chờ thanh toán": { dateRange: null, customer: "", price: "", email: "" },
     "Đã thanh toán": { dateRange: null, customer: "", price: "", email: "" },
-    "Đã Hủy": { dateRange: null, customer: "", price: "", email: "" },
+    "Đã hủy": { dateRange: null, customer: "", price: "", email: "" },
   });
   
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -75,30 +77,29 @@ const BookingStatusTabs = () => {
       const response = await get('api/bookings');
       console.log("Fetched bookings:", response);
       
-      // Organize bookings by status - sửa lại chỉ còn 3 loại
       const categorizedBookings = {
         "Chờ thanh toán": [],
         "Đã thanh toán": [],
-        "Đã Hủy": [],
+        "Đã hủy": [],
       };
       
       // Chuyển đổi trạng thái payment thành booking status
       const paymentToStatusMapping = {
         "PENDING": "PENDING",
-        "WAITING_PAYMENT": "PENDING", // Mapping cả WAITING_PAYMENT sang PENDING
-        "CONFIRMED": "PENDING", // Mapping CONFIRMED sang PENDING
+        "WAITING_PAYMENT": "PENDING",
+        "CONFIRMED": "PENDING",
         "PAID": "PAID",
-        "CANCELED": "CANCELED"
+        "FAILED": "FAILED",
+        "CANCELLED": "FAILED",  // Map CANCELLED sang FAILED
+        "CANCELED": "FAILED"    // Map CANCELED sang FAILED
       };
       
-      // Process the API response data
       if (Array.isArray(response)) {
         response.forEach(booking => {
-          // Lấy trạng thái từ paymentStatus hoặc dùng PENDING làm mặc định
+          // Xử lý trạng thái booking
           const bookingStatus = paymentToStatusMapping[booking.paymentStatus] || "PENDING";
           const tabName = statusMapping[bookingStatus] || "Chờ thanh toán";
           
-          // Format the booking data for display with the correct field names
           const formattedBooking = {
             key: booking.bookingId.toString(),
             quantity: booking.guestPhoneNumber || 'N/A',
@@ -148,25 +149,33 @@ const BookingStatusTabs = () => {
   // Handle booking cancellation after confirmation
   const handleConfirmCancel = async () => {
     try {
-      if (currentTab !== "Đã Hủy") {
-        // Thiết lập loading để tránh người dùng thao tác khi đang hủy
+      if (currentTab !== "Đã hủy") {
         setIsLoading(true);
         
-        // Call API to cancel booking - đã cập nhật endpoint để khớp với API của bạn
         await del(`api/bookings/cancel/${bookingToCancel}`);
         
-        // Tải lại dữ liệu sau khi hủy thành công
-        await fetchAllBookings();
+        // Cập nhật UI ngay lập tức
+        const updatedBookings = { ...bookings };
+        const bookingToMove = updatedBookings[currentTab].find(b => b.key === bookingToCancel);
         
-        message.success(`Đã hủy đặt phòng với ID: ${bookingToCancel}`);
+        if (bookingToMove) {
+          // Xóa booking khỏi tab hiện tại
+          updatedBookings[currentTab] = updatedBookings[currentTab].filter(b => b.key !== bookingToCancel);
+          // Thêm vào tab "Đã hủy"
+          bookingToMove.status = "FAILED";
+          updatedBookings["Đã hủy"].push(bookingToMove);
+        }
+        
+        setBookings(updatedBookings);
+        message.success(`Đã hủy đặt phòng thành công`);
       } else {
         message.info("Đặt phòng này đã bị hủy!");
       }
     } catch (error) {
       console.error("Error canceling booking:", error);
       message.error("Không thể hủy đặt phòng. Vui lòng thử lại.");
-      setIsLoading(false); // Đảm bảo tắt loading nếu có lỗi
     } finally {
+      setIsLoading(false);
       setIsModalVisible(false);
       setBookingToCancel(null);
       setCurrentTab(null);
@@ -336,10 +345,10 @@ const BookingStatusTabs = () => {
           type="primary"
           danger
           onClick={() => showCancelConfirm(record.key, tab)}
-          disabled={tab === "Đã Hủy"}
+          disabled={tab === "Đã hủy"}
           className="rounded-full px-4"
         >
-          Hủy đặt
+          {tab === "Đã hủy" ? "Đã hủy" : "Hủy đặt"}
         </Button>
       ),
     },

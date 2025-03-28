@@ -51,10 +51,10 @@ const BookingPanel = ({ bookings = [] }) => {
         };
       case 'FAILED':
         return { 
-          icon: faExclamationTriangle, 
-          color: 'text-orange-600', 
-          bgColor: 'bg-orange-100',
-          text: 'Thanh toán thất bại' 
+          icon: faTimesCircle,
+          color: 'text-red-600',
+          bgColor: 'bg-red-100',
+          text: 'Đã hủy'
         };
       default:
         return { 
