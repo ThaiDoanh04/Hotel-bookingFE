@@ -125,7 +125,7 @@ const HotelDetailsViewCard = ({ hotelDetails }) => {
                 </p>
               </div>
               <div className="text-xl font-bold text-red-500">
-                {hotelDetails?.price ? `${formatPrice(hotelDetails.price)} VND` : ''} <span className="text-sm font-normal">per night</span>
+                {hotelDetails?.price ? `${formatPrice(hotelDetails.price)} VND` : ''} <span className="text-sm font-normal">/ night</span>
               </div>
             </div>
           </div>
