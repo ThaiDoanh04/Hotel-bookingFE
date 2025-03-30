@@ -13,9 +13,11 @@ import {
   Input,
   Select,
   Upload,
-  Empty
+  Empty,
+  Table,
+  Popconfirm
 } from "antd";
-import { PlusOutlined, UploadOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
+import { PlusOutlined, UploadOutlined, LeftOutlined, RightOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import CreateRoom from "./CreateRoom";
 
 const { Title, Text } = Typography;
@@ -34,6 +36,7 @@ const RoomManagement = () => {
   const [images, setImages] = useState([]);
   const pageSize = 3;
   const totalPages = Math.ceil(hotels.length / pageSize);
+  const [uploadStatus, setUploadStatus] = useState({ loading: false, success: false, error: null });
 
   useEffect(() => {
     const fetchHotels = async () => {
@@ -106,14 +109,34 @@ const RoomManagement = () => {
 
   const handleEditRoom = (hotel) => {
     setEditingHotel(hotel);
-    setImages(hotel.images || []);
+    
+    // Reset upload status
+    setUploadStatus({ loading: false, success: false, error: null });
+    
+    // Đảm bảo images là một mảng
+    let currentImages = [];
+    
+    if (hotel.images) {
+      if (Array.isArray(hotel.images)) {
+        currentImages = [...hotel.images];
+      } else {
+        currentImages = [hotel.images];
+      }
+    }
+    
+    console.log("Đang sửa hotel với ảnh:", currentImages);
+    
+    // Đặt images cho state
+    setImages(currentImages);
+    
     form.setFieldsValue({
       title: hotel.title,
       subtitle: hotel.subtitle,
-      benefits: hotel.benefits.join(', '),
+      benefits: Array.isArray(hotel.benefits) ? hotel.benefits.join(', ') : '',
       price: hotel.price,
       city: hotel.city
     });
+    
     setIsModalVisible(true);
   };
 
@@ -121,18 +144,45 @@ const RoomManagement = () => {
     try {
       const values = await form.validateFields();
       
-      const updatedHotel = {
+      if (parseFloat(values.price) <= 0) {
+        message.error("Giá phòng phải lớn hơn 0!");
+        return;
+      }
+      
+      console.log("Current state images before save:", images);
+      
+      if (!images || images.length === 0) {
+        message.warning("Vui lòng tải lên ít nhất một ảnh cho khách sạn!");
+        return;
+      }
+      
+      const processedImages = images.map(img => {
+        if (typeof img === 'object' && img.url) {
+          return img.url;
+        }
+        return img;
+      });
+      
+      console.log("Sending updated hotel data:", {
         hotelId: editingHotel.hotelId,
-        images: images,
+        images: processedImages,
         title: values.title,
         subtitle: values.subtitle,
         benefits: values.benefits.split(',').map(b => b.trim()),
         price: parseFloat(values.price),
         city: values.city,
         ratings: editingHotel.ratings
-      };
-
-      const result = await put(`api/hotels/${editingHotel.hotelId}`, updatedHotel);
+      });
+      const result = await put(`api/hotels/${editingHotel.hotelId}`, {
+        hotelId: editingHotel.hotelId,
+        images: processedImages,
+        title: values.title,
+        subtitle: values.subtitle,
+        benefits: values.benefits.split(',').map(b => b.trim()),
+        price: parseFloat(values.price),
+        city: values.city,
+        ratings: editingHotel.ratings
+      });
       
       setHotels(hotels.map((hotel) => 
         hotel.hotelId === editingHotel.hotelId ? result : hotel
@@ -144,6 +194,7 @@ const RoomManagement = () => {
       setImages([]);
       form.resetFields();
     } catch (error) {
+      console.error("Lỗi cập nhật khách sạn:", error);
       message.error(error.message || "Cập nhật thông tin khách sạn thất bại!");
     }
   };
@@ -156,20 +207,53 @@ const RoomManagement = () => {
   };
 
   const handleImageChange = (info) => {
-    if (info.file.status === "done") {
-      setImages([URL.createObjectURL(info.file.originFileObj)]);
-      message.success("Ảnh khách sạn đã được cập nhật!");
-    } else if (info.file.status === "error") {
-      message.error("Tải ảnh lên thất bại!");
+    console.log("Image change info:", info);
+    
+    if (info.file.status === 'uploading') {
+      return;
+    }
+    
+    if (info.file.status === 'error') {
+      message.error(`${info.file.name} tải lên thất bại.`);
+      return;
+    }
+    
+    if (info.file.status === 'done') {
+      const imageUrl = info.file.response?.url || info.file.response?.imageUrl;
+      
+      if (imageUrl) {
+        setImages([imageUrl]);
+        message.success('Ảnh đã được tải lên thành công!');
+        console.log("Đã cập nhật state images với URL mới:", imageUrl);
+      } else {
+        message.warning('Không nhận được URL ảnh từ server!');
+      }
+    }
+    
+    if (info.file.status === 'removed') {
+      setImages([]);
+      console.log("Đã xóa ảnh và reset state images");
     }
   };
 
-  const customRequest = async ({ file, onSuccess, onError }) => {
+  const customRequest = async ({ file, onSuccess, onError, onProgress }) => {
     try {
+      onProgress({ percent: 30 });
+      message.loading({ content: 'Đang tải ảnh lên...', key: 'uploadImage' });
+      
       const imageUrl = await uploadImage(file);
-      onSuccess(imageUrl);
+      
+      setImages([imageUrl]);
+      
+      onProgress({ percent: 100 });
+      onSuccess({ url: imageUrl, name: file.name });
+      message.success({ content: 'Đã tải ảnh lên thành công!', key: 'uploadImage' });
+      
+      console.log("Upload thành công, URL ảnh:", imageUrl);
+      console.log("State images hiện tại:", images);
     } catch (error) {
       onError(error);
+      message.error({ content: 'Tải ảnh lên thất bại!', key: 'uploadImage' });
     }
   };
 
@@ -181,22 +265,32 @@ const RoomManagement = () => {
 
   const uploadImage = async (file) => {
     try {
+      setUploadStatus({ loading: true, success: false, error: null });
+      
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await uploadFile('api/upload/image', formData);
+      const response = await uploadFile('api/upload/image', file);
+      console.log("API Upload Response:", response);
       
-      if (!response || response.error) {
-        throw new Error(response?.error || 'Upload failed');
+      if (!response) {
+        throw new Error('Không nhận được phản hồi từ server');
       }
-
-      return {
-        url: response.url,
-        fileName: response.name,
-        size: file.size,
-        type: file.type
-      };
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      const imageUrl = response.imageUrl || response.url;
+      if (!imageUrl) {
+        throw new Error('Không nhận được URL ảnh từ server');
+      }
+      
+      setUploadStatus({ loading: false, success: true, error: null });
+      return imageUrl;
     } catch (error) {
+      console.error("Lỗi upload ảnh:", error);
+      setUploadStatus({ loading: false, success: false, error: error.message });
       message.error(error.message || 'Tải ảnh lên thất bại!');
       throw error;
     }
@@ -361,23 +455,89 @@ const RoomManagement = () => {
         }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="Hình ảnh khách sạn">
-            <div className="flex items-center flex-wrap gap-2">
-              {images.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Hotel Preview ${index + 1}`}
-                  className="w-24 h-24 object-cover rounded"
-                />
-              ))}
+          <Form.Item
+            label="Ảnh khách sạn"
+            required
+            tooltip="Kích thước tối đa: 5MB. Định dạng: JPG, PNG"
+          >
+            <div>
+              {uploadStatus.loading && <div className="mb-2 text-blue-500">Đang tải ảnh lên...</div>}
+              {uploadStatus.success && <div className="mb-2 text-green-500">Tải ảnh thành công!</div>}
+              {uploadStatus.error && <div className="mb-2 text-red-500">Lỗi: {uploadStatus.error}</div>}
+              
               <Upload
-                showUploadList={false}
+                listType="picture-card"
+                fileList={images.map((url, index) => {
+                  if (typeof url === 'string') {
+                    return {
+                      uid: `-${index}`,
+                      name: `image-${index}.jpg`,
+                      status: 'done',
+                      url: url,
+                      thumbUrl: url
+                    };
+                  }
+                  return {
+                    ...url,
+                    uid: `-${index}`,
+                    name: url.fileName || `image-${index}.jpg`,
+                    status: 'done',
+                    thumbUrl: url.url
+                  };
+                })}
                 customRequest={customRequest}
-                onChange={handleImagesChange}
+                onChange={handleImageChange}
+                accept=".jpg,.jpeg,.png"
+                maxCount={1}
+                showUploadList={{
+                  showPreviewIcon: true,
+                  showRemoveIcon: true,
+                  showDownloadIcon: false
+                }}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith('image/');
+                  const isLt5M = file.size / 1024 / 1024 < 5;
+
+                  if (!isImage) {
+                    message.error('Chỉ được tải lên file ảnh!');
+                    return false;
+                  }
+
+                  if (!isLt5M) {
+                    message.error('Ảnh phải nhỏ hơn 5MB!');
+                    return false;
+                  }
+
+                  return true;
+                }}
               >
-                <Button icon={<UploadOutlined />}>Thay đổi ảnh</Button>
+                {images.length >= 1 ? null : (
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Tải ảnh mới</div>
+                  </div>
+                )}
               </Upload>
+            </div>
+            
+            {images.length > 0 && (
+              <div className="mt-2">
+                <div className="text-sm text-gray-500 mb-1">Ảnh hiện tại:</div>
+                <div className="border border-gray-200 rounded p-2 inline-block">
+                  <img 
+                    src={typeof images[0] === 'string' ? images[0] : images[0].url} 
+                    alt="Current" 
+                    style={{ maxHeight: '100px' }} 
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="text-sm mt-2 text-gray-500">
+              {images.length > 0 
+                ? 'Nhấp vào nút + để thay đổi ảnh hoặc nhấp vào ảnh để xem trước/xóa' 
+                : 'Vui lòng tải lên ít nhất một ảnh cho khách sạn'}
             </div>
           </Form.Item>
 
@@ -410,18 +570,28 @@ const RoomManagement = () => {
           </Form.Item>
 
           <Form.Item
-            label="Giá phòng (VND)"
             name="price"
+            label="Giá phòng"
             rules={[
-              { required: true, message: "Vui lòng nhập giá phòng!" },
-              { type: "number", min: 0, message: "Giá phòng không được âm!" }
+              { required: true, message: 'Vui lòng nhập giá phòng!' },
+              { 
+                validator: (_, value) => {
+                  const price = parseFloat(value);
+                  if (isNaN(price)) {
+                    return Promise.reject('Giá phải là một số!');
+                  }
+                  if (price <= 0) {
+                    return Promise.reject('Giá phải lớn hơn 0!');
+                  }
+                  return Promise.resolve();
+                } 
+              }
             ]}
           >
             <Input 
-              type="number" 
-              placeholder="Giá phòng"
-              min={0}
-              step={100000}
+              type="number"
+              min={1}
+              step={10000}
             />
           </Form.Item>
 
